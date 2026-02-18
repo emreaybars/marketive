@@ -2,7 +2,7 @@ import { Logo } from '@/assets/logo'
 import { cn } from '@/lib/utils'
 import dashboardDark from './assets/dashboard-dark.png'
 import dashboardLight from './assets/dashboard-light.png'
-import { UserAuthForm } from './components/user-auth-form'
+import { SignIn as ClerkSignIn } from '@clerk/clerk-react'
 
 export function SignIn2() {
   return (
@@ -11,34 +11,30 @@ export function SignIn2() {
         <div className='mx-auto flex w-full flex-col justify-center space-y-2 py-8 sm:w-[480px] sm:p-8'>
           <div className='mb-4 flex items-center justify-center'>
             <Logo className='me-2' />
-            <h1 className='text-xl font-medium'>Shadcn Admin</h1>
+            <h1 className='text-xl font-medium'>Marketive</h1>
           </div>
         </div>
         <div className='mx-auto flex w-full max-w-sm flex-col justify-center space-y-2'>
-          <div className='flex flex-col space-y-2 text-start'>
-            <h2 className='text-lg font-semibold tracking-tight'>Sign in</h2>
-            <p className='text-sm text-muted-foreground'>
-              Enter your email and password below <br />
-              to log into your account
-            </p>
-          </div>
-          <UserAuthForm />
+          <ClerkSignIn
+            signUpUrl='/sign-up'
+            forceRedirectUrl={false}
+          />
           <p className='px-8 text-center text-sm text-muted-foreground'>
-            By clicking sign in, you agree to our{' '}
+            Giriş yaparak{' '}
             <a
               href='/terms'
               className='underline underline-offset-4 hover:text-primary'
             >
-              Terms of Service
+              Kullanım Şartları
             </a>{' '}
-            and{' '}
+            ve{' '}
             <a
               href='/privacy'
               className='underline underline-offset-4 hover:text-primary'
             >
-              Privacy Policy
-            </a>
-            .
+              Gizlilik Politikası
+            </a>{' '}
+           'nı kabul etmiş olursunuz.
           </p>
         </div>
       </div>
@@ -54,14 +50,14 @@ export function SignIn2() {
           className='dark:hidden'
           width={1024}
           height={1151}
-          alt='Shadcn-Admin'
+          alt='Marketive'
         />
         <img
           src={dashboardDark}
           className='hidden dark:block'
           width={1024}
           height={1138}
-          alt='Shadcn-Admin'
+          alt='Marketive'
         />
       </div>
     </div>

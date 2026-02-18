@@ -17,33 +17,33 @@ import {
 const items = [
   {
     id: 'recents',
-    label: 'Recents',
+    label: 'Son Kullanılanlar',
   },
   {
     id: 'home',
-    label: 'Home',
+    label: 'Ana Sayfa',
   },
   {
     id: 'applications',
-    label: 'Applications',
+    label: 'Uygulamalar',
   },
   {
     id: 'desktop',
-    label: 'Desktop',
+    label: 'Masaüstü',
   },
   {
     id: 'downloads',
-    label: 'Downloads',
+    label: 'İndirilenler',
   },
   {
     id: 'documents',
-    label: 'Documents',
+    label: 'Belgeler',
   },
 ] as const
 
 const displayFormSchema = z.object({
   items: z.array(z.string()).refine((value) => value.some((item) => item), {
-    message: 'You have to select at least one item.',
+    message: 'En az bir öğe seçmelisiniz.',
   }),
 })
 
@@ -72,9 +72,9 @@ export function DisplayForm() {
           render={() => (
             <FormItem>
               <div className='mb-4'>
-                <FormLabel className='text-base'>Sidebar</FormLabel>
+                <FormLabel className='text-base'>Kenar Çubuğu</FormLabel>
                 <FormDescription>
-                  Select the items you want to display in the sidebar.
+                  Kenar çubuğunda göstermek istediğiniz öğeleri seçin.
                 </FormDescription>
               </div>
               {items.map((item) => (
@@ -114,7 +114,7 @@ export function DisplayForm() {
             </FormItem>
           )}
         />
-        <Button type='submit'>Update display</Button>
+        <Button type='submit'>Görüntüyü güncelle</Button>
       </form>
     </Form>
   )

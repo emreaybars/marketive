@@ -85,3 +85,19 @@
     height: 0;
   }
 }
+
+/* TanStack Router devtools butonlarını gizle */
+.tsr-devtools,
+#tsr-devtools,
+[class*='tsr-devtools'],
+[class*='tanstack-router-devtools'] {
+  display: none !important;
+  visibility: hidden !important;
+  opacity: 0 !important;
+  pointer-events: none !important;
+}
+
+/* TanStack Query devtools parent container gizle */
+.tsqd-parent-container {
+  display: none !important;
+}

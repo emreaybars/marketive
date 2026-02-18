@@ -56,7 +56,7 @@ export function AppearanceForm() {
           name='font'
           render={({ field }) => (
             <FormItem>
-              <FormLabel>Font</FormLabel>
+              <FormLabel>Yazı Tipi</FormLabel>
               <div className='relative w-max'>
                 <FormControl>
                   <select
@@ -77,7 +77,7 @@ export function AppearanceForm() {
                 <ChevronDownIcon className='absolute end-3 top-2.5 h-4 w-4 opacity-50' />
               </div>
               <FormDescription className='font-manrope'>
-                Set the font you want to use in the dashboard.
+                Panelde kullanmak istediğiniz yazı tipini ayarlayın.
               </FormDescription>
               <FormMessage />
             </FormItem>
@@ -88,9 +88,9 @@ export function AppearanceForm() {
           name='theme'
           render={({ field }) => (
             <FormItem>
-              <FormLabel>Theme</FormLabel>
+              <FormLabel>Tema</FormLabel>
               <FormDescription>
-                Select the theme for the dashboard.
+                Panel için tema seçin.
               </FormDescription>
               <FormMessage />
               <RadioGroup
@@ -120,7 +120,7 @@ export function AppearanceForm() {
                       </div>
                     </div>
                     <span className='block w-full p-2 text-center font-normal'>
-                      Light
+                      Açık
                     </span>
                   </FormLabel>
                 </FormItem>
@@ -146,7 +146,7 @@ export function AppearanceForm() {
                       </div>
                     </div>
                     <span className='block w-full p-2 text-center font-normal'>
-                      Dark
+                      Koyu
                     </span>
                   </FormLabel>
                 </FormItem>
@@ -155,7 +155,7 @@ export function AppearanceForm() {
           )}
         />
 
-        <Button type='submit'>Update preferences</Button>
+        <Button type='submit'>Tercihleri güncelle</Button>
       </form>
     </Form>
   )

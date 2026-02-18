@@ -26,20 +26,20 @@ import { Textarea } from '@/components/ui/textarea'
 
 const profileFormSchema = z.object({
   username: z
-    .string('Please enter your username.')
-    .min(2, 'Username must be at least 2 characters.')
-    .max(30, 'Username must not be longer than 30 characters.'),
+    .string('Lütfen kullanıcı adınızı girin.')
+    .min(2, 'Kullanıcı adı en az 2 karakter olmalıdır.')
+    .max(30, 'Kullanıcı adı 30 karakterden uzun olmamalıdır.'),
   email: z.email({
     error: (iss) =>
       iss.input === undefined
-        ? 'Please select an email to display.'
+        ? 'Lütfen görüntülemek için bir e-posta seçin.'
         : undefined,
   }),
   bio: z.string().max(160).min(4),
   urls: z
     .array(
       z.object({
-        value: z.url('Please enter a valid URL.'),
+        value: z.url('Lütfen geçerli bir URL girin.'),
       })
     )
     .optional(),
@@ -79,13 +79,13 @@ export function ProfileForm() {
           name='username'
           render={({ field }) => (
             <FormItem>
-              <FormLabel>Username</FormLabel>
+              <FormLabel>Kullanıcı Adı</FormLabel>
               <FormControl>
-                <Input placeholder='shadcn' {...field} />
+                <Input placeholder='kullaniciadi' {...field} />
               </FormControl>
               <FormDescription>
-                This is your public display name. It can be your real name or a
-                pseudonym. You can only change this once every 30 days.
+                Bu sizin herkese açık görünen adınızdır. Gerçek adınız veya bir
+                takma ad olabilir. Bunu sadece 30 günde bir kez değiştirebilirsiniz.
               </FormDescription>
               <FormMessage />
             </FormItem>
@@ -96,11 +96,11 @@ export function ProfileForm() {
           name='email'
           render={({ field }) => (
             <FormItem>
-              <FormLabel>Email</FormLabel>
+              <FormLabel>E-posta</FormLabel>
               <Select onValueChange={field.onChange} defaultValue={field.value}>
                 <FormControl>
                   <SelectTrigger>
-                    <SelectValue placeholder='Select a verified email to display' />
+                    <SelectValue placeholder='Görüntülemek için doğrulanmış bir e-posta seçin' />
                   </SelectTrigger>
                 </FormControl>
                 <SelectContent>
@@ -110,8 +110,8 @@ export function ProfileForm() {
                 </SelectContent>
               </Select>
               <FormDescription>
-                You can manage verified email addresses in your{' '}
-                <Link to='/'>email settings</Link>.
+                Doğrulanmış e-posta adreslerinizi{' '}
+                <Link to='/'>e-posta ayarlarınızdan</Link> yönetebilirsiniz.
               </FormDescription>
               <FormMessage />
             </FormItem>
@@ -122,17 +122,17 @@ export function ProfileForm() {
           name='bio'
           render={({ field }) => (
             <FormItem>
-              <FormLabel>Bio</FormLabel>
+              <FormLabel>Biyografi</FormLabel>
               <FormControl>
                 <Textarea
-                  placeholder='Tell us a little bit about yourself'
+                  placeholder='Kendiniz hakkında biraz bilgi verin'
                   className='resize-none'
                   {...field}
                 />
               </FormControl>
               <FormDescription>
-                You can <span>@mention</span> other users and organizations to
-                link to them.
+                Bağlantı vermek için diğer kullanıcıları ve kuruluşları{' '}
+                <span>@bahsetme</span> şeklinde belirtebilirsiniz.
               </FormDescription>
               <FormMessage />
             </FormItem>
@@ -147,10 +147,10 @@ export function ProfileForm() {
               render={({ field }) => (
                 <FormItem>
                   <FormLabel className={cn(index !== 0 && 'sr-only')}>
-                    URLs
+                    URL'ler
                   </FormLabel>
                   <FormDescription className={cn(index !== 0 && 'sr-only')}>
-                    Add links to your website, blog, or social media profiles.
+                    Web sitenize, blogunuza veya sosyal medya profillerinize bağlantılar ekleyin.
                   </FormDescription>
                   <FormControl className={cn(index !== 0 && 'mt-1.5')}>
                     <Input {...field} />
@@ -167,10 +167,10 @@ export function ProfileForm() {
             className='mt-2'
             onClick={() => append({ value: '' })}
           >
-            Add URL
+            URL Ekle
           </Button>
         </div>
-        <Button type='submit'>Update profile</Button>
+        <Button type='submit'>Profili güncelle</Button>
       </form>
     </Form>
   )

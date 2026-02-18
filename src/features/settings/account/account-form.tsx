@@ -31,6 +31,7 @@ import {
 import { DatePicker } from '@/components/date-picker'
 
 const languages = [
+  { label: 'Türkçe', value: 'tr' },
   { label: 'English', value: 'en' },
   { label: 'French', value: 'fr' },
   { label: 'German', value: 'de' },
@@ -45,11 +46,11 @@ const languages = [
 const accountFormSchema = z.object({
   name: z
     .string()
-    .min(1, 'Please enter your name.')
-    .min(2, 'Name must be at least 2 characters.')
-    .max(30, 'Name must not be longer than 30 characters.'),
-  dob: z.date('Please select your date of birth.'),
-  language: z.string('Please select a language.'),
+    .min(1, 'Lütfen adınızı girin.')
+    .min(2, 'Ad en az 2 karakter olmalıdır.')
+    .max(30, 'Ad 30 karakterden uzun olmamalıdır.'),
+  dob: z.date('Lütfen doğum tarihinizi seçin.'),
+  language: z.string('Lütfen bir dil seçin.'),
 })
 
 type AccountFormValues = z.infer<typeof accountFormSchema>
@@ -77,13 +78,12 @@ export function AccountForm() {
           name='name'
           render={({ field }) => (
             <FormItem>
-              <FormLabel>Name</FormLabel>
+              <FormLabel>Ad</FormLabel>
               <FormControl>
-                <Input placeholder='Your name' {...field} />
+                <Input placeholder='Adınız' {...field} />
               </FormControl>
               <FormDescription>
-                This is the name that will be displayed on your profile and in
-                emails.
+                Bu, profilinizde ve e-postalarda görüntülenecek addır.
               </FormDescription>
               <FormMessage />
             </FormItem>
@@ -94,10 +94,10 @@ export function AccountForm() {
           name='dob'
           render={({ field }) => (
             <FormItem className='flex flex-col'>
-              <FormLabel>Date of birth</FormLabel>
+              <FormLabel>Doğum Tarihi</FormLabel>
               <DatePicker selected={field.value} onSelect={field.onChange} />
               <FormDescription>
-                Your date of birth is used to calculate your age.
+                Doğum tarihiniz yaşınızı hesaplamak için kullanılır.
               </FormDescription>
               <FormMessage />
             </FormItem>
@@ -108,7 +108,7 @@ export function AccountForm() {
           name='language'
           render={({ field }) => (
             <FormItem className='flex flex-col'>
-              <FormLabel>Language</FormLabel>
+              <FormLabel>Dil</FormLabel>
               <Popover>
                 <PopoverTrigger asChild>
                   <FormControl>
@@ -124,15 +124,15 @@ export function AccountForm() {
                         ? languages.find(
                             (language) => language.value === field.value
                           )?.label
-                        : 'Select language'}
+                        : 'Dil seçin'}
                       <CaretSortIcon className='ms-2 h-4 w-4 shrink-0 opacity-50' />
                     </Button>
                   </FormControl>
                 </PopoverTrigger>
                 <PopoverContent className='w-[200px] p-0'>
                   <Command>
-                    <CommandInput placeholder='Search language...' />
-                    <CommandEmpty>No language found.</CommandEmpty>
+                    <CommandInput placeholder='Dil ara...' />
+                    <CommandEmpty>Dil bulunamadı.</CommandEmpty>
                     <CommandGroup>
                       <CommandList>
                         {languages.map((language) => (
@@ -160,13 +160,13 @@ export function AccountForm() {
                 </PopoverContent>
               </Popover>
               <FormDescription>
-                This is the language that will be used in the dashboard.
+                Bu, panelde kullanılacak dildir.
               </FormDescription>
               <FormMessage />
             </FormItem>
           )}
         />
-        <Button type='submit'>Update account</Button>
+        <Button type='submit'>Hesabı güncelle</Button>
       </form>
     </Form>
   )

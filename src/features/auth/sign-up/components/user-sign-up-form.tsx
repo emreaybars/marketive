@@ -3,10 +3,9 @@ import { z } from 'zod'
 import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { Link, useNavigate } from '@tanstack/react-router'
-import { Loader2, LogIn } from 'lucide-react'
+import { Loader2, UserPlus } from 'lucide-react'
 import { toast } from 'sonner'
-import { IconFacebook, IconGithub } from '@/assets/brand-icons'
-import { useSignIn } from '@clerk/clerk-react'
+import { useSignUp } from '@clerk/clerk-react'
 import { cn } from '@/lib/utils'
 import { Button } from '@/components/ui/button'
 import {
@@ -26,50 +25,56 @@ const formSchema = z.object({
     .string()
     .min(1, 'Lütfen şifrenizi girin')
     .min(7, 'Şifre en az 7 karakter uzunluğunda olmalıdır'),
+  confirmPassword: z.string().min(1, 'Lütfen şifrenizi doğrulayın'),
+}).refine((data) => data.password === data.confirmPassword, {
+  message: 'Şifreler eşleşmiyor',
+  path: ['confirmPassword'],
 })
 
-interface UserAuthFormProps extends React.HTMLAttributes<HTMLFormElement> {
+interface UserSignUpFormProps extends React.HTMLAttributes<HTMLFormElement> {
   redirectTo?: string
 }
 
-export function UserAuthForm({
+export function UserSignUpForm({
   className,
   redirectTo,
   ...props
-}: UserAuthFormProps) {
+}: UserSignUpFormProps) {
   const [isLoading, setIsLoading] = useState(false)
   const navigate = useNavigate()
-  const { signIn, isLoaded: isSignInLoaded } = useSignIn()
+  const { signUp, isLoaded: isSignUpLoaded, setActive } = useSignUp()
 
   const form = useForm<z.infer<typeof formSchema>>({
     resolver: zodResolver(formSchema),
     defaultValues: {
       email: '',
       password: '',
+      confirmPassword: '',
     },
   })
 
   async function onSubmit(data: z.infer<typeof formSchema>) {
-    if (!isSignInLoaded) return
+    if (!isSignUpLoaded) return
 
     setIsLoading(true)
 
     try {
-      const result = await signIn.create({
-        identifier: data.email,
+      const result = await signUp.create({
+        emailAddress: data.email,
         password: data.password,
       })
 
       if (result.status === 'complete') {
-        toast.success('Giriş başarılı!')
+        toast.success('Kayıt başarılı!')
         const targetPath = redirectTo || '/'
         navigate({ to: targetPath, replace: true })
-      } else if (result.status === 'needs_first_factor') {
-        // Handle 2FA if needed
-        toast.info('İki faktörlü doğrulama gerekiyor')
+      } else if (result.status === 'missing_requirements') {
+        // Email verification required
+        toast.success('Doğrama e-postası gönderildi!')
+        // Navigate to verification page or show verification UI
       }
     } catch (error: any) {
-      toast.error(error?.errors?.[0]?.message || 'Giriş başarısız')
+      toast.error(error?.errors?.[0]?.message || 'Kayıt başarısız')
     } finally {
       setIsLoading(false)
     }
@@ -99,45 +104,42 @@ export function UserAuthForm({
           control={form.control}
           name='password'
           render={({ field }) => (
-            <FormItem className='relative'>
+            <FormItem>
               <FormLabel>Şifre</FormLabel>
               <FormControl>
                 <PasswordInput placeholder='********' {...field} />
               </FormControl>
               <FormMessage />
-              <Link
-                to='/forgot-password'
-                className='absolute end-0 -top-0.5 text-sm font-medium text-muted-foreground hover:opacity-75'
-              >
-                Şifremi unuttum?
-              </Link>
             </FormItem>
           )}
         />
-        <Button className='mt-2' disabled={isLoading || !isSignInLoaded}>
-          {isLoading ? <Loader2 className='animate-spin' /> : <LogIn />}
-          Giriş Yap
+        <FormField
+          control={form.control}
+          name='confirmPassword'
+          render={({ field }) => (
+            <FormItem>
+              <FormLabel>Şifre Doğrula</FormLabel>
+              <FormControl>
+                <PasswordInput placeholder='********' {...field} />
+              </FormControl>
+              <FormMessage />
+            </FormItem>
+          )}
+        />
+        <Button className='mt-2' disabled={isLoading || !isSignUpLoaded}>
+          {isLoading ? <Loader2 className='animate-spin' /> : <UserPlus />}
+          Kayıt Ol
         </Button>
 
-        <div className='relative my-2'>
-          <div className='absolute inset-0 flex items-center'>
-            <span className='w-full border-t' />
-          </div>
-          <div className='relative flex justify-center text-xs uppercase'>
-            <span className='bg-background px-2 text-muted-foreground'>
-              Veya şununla devam et
-            </span>
-          </div>
-        </div>
-
-        <div className='grid grid-cols-2 gap-2'>
-          <Button variant='outline' type='button' disabled={isLoading}>
-            <IconGithub className='h-4 w-4' /> GitHub
-          </Button>
-          <Button variant='outline' type='button' disabled={isLoading}>
-            <IconFacebook className='h-4 w-4' /> Facebook
-          </Button>
-        </div>
+        <p className='px-8 text-center text-sm text-muted-foreground'>
+          Zaten hesabınız var mı?{' '}
+          <Link
+            to='/sign-in'
+            className='underline underline-offset-4 hover:text-primary font-medium'
+          >
+            Giriş Yapın
+          </Link>
+        </p>
       </form>
     </Form>
   )

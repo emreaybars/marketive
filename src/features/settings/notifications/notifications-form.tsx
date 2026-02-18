@@ -21,7 +21,7 @@ const notificationsFormSchema = z.object({
   type: z.enum(['all', 'mentions', 'none'], {
     error: (iss) =>
       iss.input === undefined
-        ? 'Please select a notification type.'
+        ? 'Lütfen bir bildirim türü seçin.'
         : undefined,
   }),
   mobile: z.boolean().default(false).optional(),
@@ -58,7 +58,7 @@ export function NotificationsForm() {
           name='type'
           render={({ field }) => (
             <FormItem className='relative space-y-3'>
-              <FormLabel>Notify me about...</FormLabel>
+              <FormLabel>Bana bildirim gönder...</FormLabel>
               <FormControl>
                 <RadioGroup
                   onValueChange={field.onChange}
@@ -70,7 +70,7 @@ export function NotificationsForm() {
                       <RadioGroupItem value='all' />
                     </FormControl>
                     <FormLabel className='font-normal'>
-                      All new messages
+                      Tüm yeni mesajlar
                     </FormLabel>
                   </FormItem>
                   <FormItem className='flex items-center'>
@@ -78,14 +78,14 @@ export function NotificationsForm() {
                       <RadioGroupItem value='mentions' />
                     </FormControl>
                     <FormLabel className='font-normal'>
-                      Direct messages and mentions
+                      Doğrudan mesajlar ve bahsetmeler
                     </FormLabel>
                   </FormItem>
                   <FormItem className='flex items-center'>
                     <FormControl>
                       <RadioGroupItem value='none' />
                     </FormControl>
-                    <FormLabel className='font-normal'>Nothing</FormLabel>
+                    <FormLabel className='font-normal'>Hiçbiri</FormLabel>
                   </FormItem>
                 </RadioGroup>
               </FormControl>
@@ -94,7 +94,7 @@ export function NotificationsForm() {
           )}
         />
         <div className='relative'>
-          <h3 className='mb-4 text-lg font-medium'>Email Notifications</h3>
+          <h3 className='mb-4 text-lg font-medium'>E-posta Bildirimleri</h3>
           <div className='space-y-4'>
             <FormField
               control={form.control}
@@ -103,10 +103,10 @@ export function NotificationsForm() {
                 <FormItem className='flex flex-row items-center justify-between rounded-lg border p-4'>
                   <div className='space-y-0.5'>
                     <FormLabel className='text-base'>
-                      Communication emails
+                      İletişim e-postaları
                     </FormLabel>
                     <FormDescription>
-                      Receive emails about your account activity.
+                      Hesap etkinlikleriniz hakkında e-posta alın.
                     </FormDescription>
                   </div>
                   <FormControl>
@@ -125,10 +125,10 @@ export function NotificationsForm() {
                 <FormItem className='flex flex-row items-center justify-between rounded-lg border p-4'>
                   <div className='space-y-0.5'>
                     <FormLabel className='text-base'>
-                      Marketing emails
+                      Pazarlama e-postaları
                     </FormLabel>
                     <FormDescription>
-                      Receive emails about new products, features, and more.
+                      Yeni ürünler, özellikler ve daha fazlası hakkında e-posta alın.
                     </FormDescription>
                   </div>
                   <FormControl>
@@ -146,9 +146,9 @@ export function NotificationsForm() {
               render={({ field }) => (
                 <FormItem className='flex flex-row items-center justify-between rounded-lg border p-4'>
                   <div className='space-y-0.5'>
-                    <FormLabel className='text-base'>Social emails</FormLabel>
+                    <FormLabel className='text-base'>Sosyal e-postalar</FormLabel>
                     <FormDescription>
-                      Receive emails for friend requests, follows, and more.
+                      Arkadaşlık istekleri, takipler ve daha fazlası için e-posta alın.
                     </FormDescription>
                   </div>
                   <FormControl>
@@ -166,9 +166,9 @@ export function NotificationsForm() {
               render={({ field }) => (
                 <FormItem className='flex flex-row items-center justify-between rounded-lg border p-4'>
                   <div className='space-y-0.5'>
-                    <FormLabel className='text-base'>Security emails</FormLabel>
+                    <FormLabel className='text-base'>Güvenlik e-postaları</FormLabel>
                     <FormDescription>
-                      Receive emails about your account activity and security.
+                      Hesap etkinlikleriniz ve güvenliğiniz hakkında e-posta alın.
                     </FormDescription>
                   </div>
                   <FormControl>
@@ -197,23 +197,23 @@ export function NotificationsForm() {
               </FormControl>
               <div className='space-y-1 leading-none'>
                 <FormLabel>
-                  Use different settings for my mobile devices
+                  Mobil cihazlarım için farklı ayarlar kullan
                 </FormLabel>
                 <FormDescription>
-                  You can manage your mobile notifications in the{' '}
+                  Mobil bildirimlerinizi{' '}
                   <Link
                     to='/settings'
                     className='underline decoration-dashed underline-offset-4 hover:decoration-solid'
                   >
-                    mobile settings
+                    mobil ayarlar
                   </Link>{' '}
-                  page.
+                  sayfasından yönetebilirsiniz.
                 </FormDescription>
               </div>
             </FormItem>
           )}
         />
-        <Button type='submit'>Update notifications</Button>
+        <Button type='submit'>Bildirimleri güncelle</Button>
       </form>
     </Form>
   )
