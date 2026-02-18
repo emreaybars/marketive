@@ -42,7 +42,7 @@ export function UserSignUpForm({
 }: UserSignUpFormProps) {
   const [isLoading, setIsLoading] = useState(false)
   const navigate = useNavigate()
-  const { signUp, isLoaded: isSignUpLoaded, setActive } = useSignUp()
+  const { signUp, isLoaded: isSignUpLoaded } = useSignUp()
 
   const form = useForm<z.infer<typeof formSchema>>({
     resolver: zodResolver(formSchema),

@@ -15,10 +15,7 @@ export function SignIn2() {
           </div>
         </div>
         <div className='mx-auto flex w-full max-w-sm flex-col justify-center space-y-2'>
-          <ClerkSignIn
-            signUpUrl='/sign-up'
-            forceRedirectUrl={false}
-          />
+          <ClerkSignIn signUpUrl='/sign-up' />
           <p className='px-8 text-center text-sm text-muted-foreground'>
             Giriş yaparak{' '}
             <a

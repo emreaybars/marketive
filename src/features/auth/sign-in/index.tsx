@@ -4,10 +4,7 @@ import { AuthLayout } from '../auth-layout'
 export function SignIn() {
   return (
     <AuthLayout>
-      <ClerkSignIn
-        signUpUrl='/sign-up'
-        forceRedirectUrl={false}
-      />
+      <ClerkSignIn signUpUrl='/sign-up' />
     </AuthLayout>
   )
 }

@@ -12,7 +12,7 @@ import {
 export function NavUser() {
   const { user, isLoaded } = useUser()
   const { openUserProfile } = useClerk()
-  const [menuOpen, setMenuOpen] = useState(false)
+  const [menuOpen] = useState(false)
 
   const primaryEmail = user?.emailAddresses?.[0]?.emailAddress
   const initials = user?.firstName && user?.lastName
@@ -33,7 +33,7 @@ export function NavUser() {
       <SidebarMenuItem>
         <div
           className='flex items-center gap-2 px-2 py-1.5 w-full rounded-lg hover:bg-sidebar-accent cursor-pointer relative'
-          onClick={(e) => {
+          onClick={() => {
             if (!menuOpen) {
               const trigger = document.querySelector('[data-clerk-userbutton-trigger]') as HTMLElement
               trigger?.click()
