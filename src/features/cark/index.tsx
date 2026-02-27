@@ -7,6 +7,7 @@ import { CarkChart } from './components/cark-chart'
 import { CarkEmailsTable } from './components/cark-emails-table'
 import { CarkCreateDrawer } from './components/cark-create-drawer'
 import { CarkIntegrationDialog } from './components/cark-integration-dialog'
+import { CarkWheelsList } from './components/cark-wheels-list'
 import { CarkProvider } from './components/cark-provider'
 
 export function Cark() {
@@ -32,6 +33,9 @@ export function Cark() {
             <CarkCreateDrawer />
           </div>
         </div>
+
+        {/* Çark Listesi */}
+        <CarkWheelsList />
 
         <CarkStats />
 

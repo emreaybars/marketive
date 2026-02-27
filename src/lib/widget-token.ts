@@ -3,6 +3,16 @@
  * For generating secure shop tokens for widget embed
  */
 
+// Base64URL encode helper for browser
+function base64UrlEncode(data: string): string {
+  const bytes = new TextEncoder().encode(data)
+  const binString = Array.from(bytes, (byte) => String.fromCodePoint(byte))
+  return btoa(binString.join(''))
+    .replace(/\+/g, '-')
+    .replace(/\//g, '_')
+    .replace(/=/g, '')
+}
+
 export async function generateWidgetToken(shopId: string, shopUuid: string): Promise<string> {
   const WIDGET_SECRET = import.meta.env.VITE_WIDGET_SECRET || 'change-me-in-production'
 
@@ -23,7 +33,7 @@ export async function generateWidgetToken(shopId: string, shopUuid: string): Pro
 
   const signedPayload = { ...payload, sig: hashHex }
 
-  return Buffer.from(JSON.stringify(signedPayload)).toString('base64url')
+  return base64UrlEncode(JSON.stringify(signedPayload))
 }
 
 export function generateWidgetEmbedCode(shopId: string, shopUuid: string, domain: string): string {
