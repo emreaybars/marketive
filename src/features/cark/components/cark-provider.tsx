@@ -259,27 +259,3 @@ export function useCark() {
   }
   return context
 }
-
-// Helper: Generate shop token (client-side)
-// NOTE: In production, this should be server-side for security
-async function generateShopToken(shopUuid: string, shopId: string): Promise<string> {
-  // For now, generate client-side using crypto API
-  const WIDGET_SECRET = process.env.NEXT_PUBLIC_WIDGET_SECRET || 'default-secret-change-in-production'
-
-  const payload = {
-    sid: shopId,
-    uid: shopUuid,
-    ts: Date.now()
-  }
-
-  const payloadStr = JSON.stringify(payload)
-  const signature = await crypto.subtle.digest(
-    'SHA-256',
-    new TextEncoder().encode(payloadStr + WIDGET_SECRET)
-  )
-  const signatureArray = Array.from(new Uint8Array(signature))
-  const signatureHex = signatureArray.map(b => b.toString(16).padStart(2, '0')).join('')
-
-  const signedPayload = { ...payload, sig: signatureHex }
-  return Buffer.from(JSON.stringify(signedPayload)).toString('base64url')
-}

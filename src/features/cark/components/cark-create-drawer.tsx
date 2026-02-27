@@ -150,7 +150,6 @@ export function CarkCreateDrawer() {
   const { createWheel } = useCark()
   const [logoPreview, setLogoPreview] = useState<string | null>(null)
   const [embedCode, setEmbedCode] = useState<string>('')
-  const [shopId, setShopId] = useState<string>('')
 
   const [formData, setFormData] = useState<WheelFormData>(initialFormData)
 
@@ -196,7 +195,6 @@ export function CarkCreateDrawer() {
 
     if (result.success && result.wheel) {
       // Başarılı - embed kodu göster
-      setShopId(formData.storeId.trim())
       setEmbedCode(result.wheel.embed_code || '')
       setActiveTab('success')
     } else {
@@ -815,7 +813,6 @@ export function CarkCreateDrawer() {
                       setFormData(initialFormData)
                       setLogoPreview(null)
                       setEmbedCode('')
-                      setShopId('')
                     }}
                     variant="outline"
                   >

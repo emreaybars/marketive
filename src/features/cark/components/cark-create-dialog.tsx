@@ -19,10 +19,51 @@ export function CarkCreateDialog() {
   const [name, setName] = useState('')
   const { createWheel } = useCark()
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
     if (name.trim()) {
-      createWheel(name.trim())
+      // Create a basic wheel with default values
+      await createWheel({
+        storeId: name.toLowerCase().replace(/[^a-z0-9-]/g, '-'),
+        storeName: name.trim(),
+        logoUrl: '',
+        websiteUrl: '',
+        brandName: '',
+        contactInfoType: 'email',
+        widgetTitle: 'Çarkı Çevir Hediyeni Kazan!',
+        widgetDescription: 'Hediyeni almak için hemen çarkı çevir.',
+        buttonText: 'ÇARKI ÇEVİR',
+        backgroundColor: 'rgba(139, 0, 0, 0.7)',
+        buttonColor: '#d10000',
+        autoShow: false,
+        showDelay: 2000,
+        prizes: [
+          {
+            name: 'İndirim',
+            description: '%10 indirim kazandınız!',
+            redirectUrl: '',
+            color: '#fa3939',
+            chance: 34,
+            couponCodes: ''
+          },
+          {
+            name: 'Kupon',
+            description: 'Ücretsiz kupon kazandınız!',
+            redirectUrl: '',
+            color: '#4aa3df',
+            chance: 33,
+            couponCodes: ''
+          },
+          {
+            name: 'Hediye',
+            description: 'Özel hediye kazandınız!',
+            redirectUrl: '',
+            color: '#7c3aed',
+            chance: 33,
+            couponCodes: ''
+          }
+        ]
+      })
       setName('')
       setOpen(false)
     }

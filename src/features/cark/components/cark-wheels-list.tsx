@@ -10,18 +10,6 @@ import {
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu'
 
-const statusVariants = {
-  active: 'default',
-  inactive: 'secondary',
-  archived: 'outline',
-} as const
-
-const statusLabels = {
-  active: 'Aktif',
-  inactive: 'Pasif',
-  archived: 'Arşivlendi',
-} as const
-
 export function CarkWheelsList() {
   const { wheels } = useCark()
 
@@ -40,12 +28,12 @@ export function CarkWheelsList() {
               <div className='flex-1'>
                 <div className='flex items-center gap-2'>
                   <h3 className='font-semibold'>{wheel.name}</h3>
-                  <Badge variant={statusVariants[wheel.status]}>
-                    {statusLabels[wheel.status]}
+                  <Badge variant={wheel.active ? 'default' : 'secondary'}>
+                    {wheel.active ? 'Aktif' : 'Pasif'}
                   </Badge>
                 </div>
                 <p className='mt-1 text-sm text-muted-foreground'>
-                  {wheel.spins} çevirme • {new Date(wheel.createdAt).toLocaleDateString('tr-TR')}
+                  {wheel.shop_id} • {new Date(wheel.created_at).toLocaleDateString('tr-TR')}
                 </p>
               </div>
               <div className='flex items-center gap-2'>
