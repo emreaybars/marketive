@@ -1,0 +1,142 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Çarkıfelek Widget - Güvenli Embed Örneği</title>
+  <style>
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+      margin: 0;
+      padding: 0;
+      background: #f5f5f5;
+    }
+    .demo-page {
+      max-width: 1200px;
+      margin: 0 auto;
+      padding: 40px 20px;
+    }
+    .demo-header {
+      text-align: center;
+      margin-bottom: 40px;
+    }
+    .demo-header h1 {
+      color: #333;
+      margin-bottom: 10px;
+    }
+    .demo-header p {
+      color: #666;
+    }
+    .demo-content {
+      background: white;
+      padding: 30px;
+      border-radius: 10px;
+      box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+    }
+    .config-panel {
+      background: #f8f9fa;
+      padding: 20px;
+      border-radius: 8px;
+      margin-bottom: 20px;
+    }
+    .config-panel h3 {
+      margin-top: 0;
+      color: #555;
+    }
+    .config-panel code {
+      background: #fff;
+      padding: 2px 6px;
+      border-radius: 4px;
+      font-size: 12px;
+      color: #e83e8c;
+    }
+    .embed-code {
+      background: #1e1e1e;
+      color: #d4d4d4;
+      padding: 20px;
+      border-radius: 8px;
+      overflow-x: auto;
+      font-family: 'Monaco', 'Menlo', monospace;
+      font-size: 13px;
+      line-height: 1.5;
+    }
+    .embed-code .tag { color: #569cd6; }
+    .embed-code .attr { color: #9cdcfe; }
+    .embed-code .string { color: #ce9178; }
+    .embed-code .comment { color: #6a9955; }
+  </style>
+</head>
+<body>
+  <div class="demo-page">
+    <div class="demo-header">
+      <h1>🎡 Çarkıfelek Widget Demo</h1>
+      <p>Token tabanlı güvenli sistem ile çalışan widget örneği</p>
+    </div>
+
+    <div class="demo-content">
+      <div class="config-panel">
+        <h3>🔒 Güvenlik Özellikleri</h3>
+        <ul>
+          <li>✅ Supabase anahtarları expose edilmiyor</li>
+          <li>✅ Her shop için benzersiz token</li>
+          <li>✅ Token imzası ile doğrulama</li>
+          <li>✅ Kendi API sunucunuz üzerinden erişim</li>
+        </ul>
+      </div>
+
+      <h2>Embed Kodu</h2>
+      <p>Aşağıdaki kodu sitenize ekleyin:</p>
+
+      <div class="embed-code">
+        <span class="comment">&lt;!-- Çarkıfelek Widget --&gt;</span><br>
+        <span class="tag">&lt;script</span> <span class="attr">id</span>=<span class="string">"carkifelek-widget-script"</span><br>
+        <span class="attr">  data-shop-token</span>=<span class="string">"SHOPTOKENBURAYAGELECEK"</span><br>
+        <span class="attr">  src</span>=<span class="string">"https://domain.com/widget.js"</span><span class="tag">&gt;</span><br>
+        <span class="tag">&lt;/script&gt;</span>
+      </div>
+
+      <div class="config-panel" style="margin-top: 30px;">
+        <h3>📝 Nasıl Kullanılır?</h3>
+        <ol>
+          <li>Admin panelde çarkınızı oluşturun</li>
+          <li>Sistem otomatik olarak size özel bir token üretir</li>
+          <li>Embed kodunu kopyalayın</li>
+          <li>Sitenize yapıştırın</li>
+          <li>Bitmiş! Widget güvenli bir şekilde çalışacaktır</li>
+        </ol>
+      </div>
+
+      <h2>Sayfa İçeriği</h2>
+      <p>Bu örnek bir sayfa içeriğidir. Widget sayfa yüklendikten sonra görünecektir.</p>
+
+      <div style="margin-top: 20px; padding: 20px; background: #e3f2fd; border-radius: 8px;">
+        <h3>🎁 Özel İndirimler</h3>
+        <p>Çarkı çevir ve kazanacağın ödülü gör!</p>
+      </div>
+
+      <div style="margin-top: 40px; height: 400px; background: #fafafa; border-radius: 8px; display: flex; align-items: center; justify-content: center;">
+        <p style="color: #999;">Daha fazla içerik...</p>
+      </div>
+    </div>
+  </div>
+
+  <!-- ============================================== -->
+  <!-- ÇARKIFELEK WIDGET - GÜVENLİ VERSİYON -->
+  <!-- ============================================== -->
+  <!--
+    NOT: Bu token örnektir. Gerçek kullanımda admin panelde
+    otomatik üretilen token kullanılacaktır.
+
+    Token yapısı:
+    - Her shop için benzersiz
+    - HMAC-SHA256 imzası ile korunmuş
+    - Supabase anahtarları içermez
+    - Sadece ilgili shop için geçerli
+  -->
+
+  <script id="carkifelek-widget-script"
+    data-shop-token="eyJzaWQiOiJURVNUMDAxIiwidWlkIjoiMGI5OGRhYWMtM2JkZC00NWUzLWE0YmQtOGFhNzg0OWIxYmEyIiwidHMiOjE3NzIyMzAwNjIzNTcsInNpZyI6IjkzYjM3ZDQxZTYwN2U2NThjN2M1NjM5ZGQ4NjhhZWMwNzIwN2Q5YWI5NjBiYTQ4ODg4OTgyN2ZkNmFkNzhjNWIifQ"
+    src="http://localhost:3001/widget.js">
+  </script>
+</body>
+</html>

@@ -1,0 +1,189 @@
+# Production Deployment Guide
+
+## 📋 Deployment Checklist
+
+- [ ] Supabase database kurulumu
+- [ ] Environment variables ayarla
+- [ ] WIDGET_SECRET değiştir
+- [ ] Admin panel build ve deploy
+- [ ] API server deploy
+- [ ] Widget.js CDN'e yükle
+- [ ] Test et
+
+---
+
+## 1. Environment Variables
+
+Production `.env` dosyası:
+
+```bash
+# Supabase
+SUPABASE_URL=https://your-project.supabase.co
+SUPABASE_SERVICE_ROLE_KEY=your-service-role-key
+
+# Widget API
+WIDGET_API_PORT=3001
+WIDGET_SECRET=<BURAYA_GUVENLI_STRING_GELECEK>
+
+# Clerk (Authentication)
+VITE_CLERK_PUBLISHABLE_KEY=pk_test_...
+VITE_CLERK_SECRET_KEY=sk_test_...
+```
+
+### Güvenli WIDGET_SECRET Üretin:
+
+```bash
+# Terminalde çalıştırın:
+node -e "console.log(require('crypto').randomBytes(32).toString('hex'))"
+
+# Çıktıyı .env dosyasına ekleyin:
+# WIDGET_SECRET=a1b2c3d4e5f6...
+```
+
+---
+
+## 2. Supabase Production Setup
+
+### 2.1. Database Schema
+
+Supabase Dashboard > SQL Editor'da çalıştırın:
+
+```bash
+# schema.sql dosyasının içeriğini kopyalayıp çalıştırın
+cat supabase/schema.sql | pbcopy  # macOS
+# veya dosyadan kopyalayın
+```
+
+### 2.2. Row Level Security (RLS)
+
+Zaten `schema.sql` içinde mevcut, ancak kontrol edin:
+
+```sql
+-- RLS aktif mi kontrol et
+SELECT tablename, rowsecurity
+FROM pg_tables
+WHERE schemaname = 'public';
+```
+
+### 2.3. Test Shop Ekleme
+
+Production'da test shop'u oluşturun:
+
+```sql
+INSERT INTO shops (shop_id, name, logo_url, website_url, brand_name, contact_info_type, active)
+VALUES (
+  'SHOP001',
+  'Demo Mağaza',
+  'https://yourdomain.com/logo.png',
+  'https://yourdomain.com',
+  'YourBrand',
+  'email',
+  true
+);
+```
+
+---
+
+## 3. Deployment Options
+
+### Option A: Vercel + Railway (Önerilen)
+
+**Admin Panel → Vercel**
+**API Server → Railway**
+
+#### A.1. Admin Panel (Vercel)
+
+```bash
+# 1. Vercel CLI kur
+npm i -g vercel
+
+# 2. Deploy
+vercel
+
+# 3. Environment variables ekleyin (Vercel Dashboard)
+# - VITE_CLERK_PUBLISHABLE_KEY
+# - VITE_SUPABASE_URL
+# - VITE_SUPABASE_ANON_KEY
+```
+
+#### A.2. API Server (Railway)
+
+```bash
+# 1. Railway CLI kur
+npm i -g @railway/cli
+
+# 2. Login
+railway login
+
+# 3. Yeni proje oluştur
+railway init
+
+# 4. PostgreSQL ekle (Railway'in kendi DB'sini kullanabilirsiniz)
+railway add postgresql
+
+# 5. Environment variables
+railway variables set SUPABASE_URL=https://...
+railway variables set SUPABASE_SERVICE_ROLE_KEY=...
+railway variables set WIDGET_SECRET=...
+railway variables set PORT=3001
+
+# 6. Deploy
+railway up
+```
+
+### Option B: Render.com
+
+Hem admin panel hem API için Render kullanın:
+
+**Admin Panel:**
+- Type: Web Service
+- Build Command: `npm run build`
+- Start Command: `npm run preview`
+
+**API Server:**
+- Type: Web Service
+- Build Command: (boş bırakın)
+- Start Command: `npm run api:prod`
+
+### Option C: Docker (Self-hosted)
+
+`Dockerfile` oluşturun:<tool_call><arg_key>content</arg_key><arg_value># API Server Dockerfile
+FROM node:20-alpine AS api
+
+WORKDIR /app
+
+# Copy package files
+COPY package*.json ./
+RUN npm ci --only=production
+
+# Copy server files
+COPY server/ ./server/
+COPY .env.example .env
+
+# Expose port
+EXPOSE 3001
+
+# Start
+CMD ["npm", "run", "api:prod"]
+
+
+# Admin Panel Dockerfile
+FROM node:20-alpine AS admin
+
+WORKDIR /app
+
+# Copy package files
+COPY package*.json ./
+RUN npm ci
+
+# Copy source
+COPY . .
+
+# Build
+RUN npm run build
+
+# Expose port
+EXPOSE 3000
+
+# Start
+CMD ["npm", "run", "preview"]
