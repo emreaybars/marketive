@@ -146,21 +146,61 @@ const initialFormData: WheelFormData = {
 
 export function CarkCreateDrawer() {
   const [open, setOpen] = useState(false)
-  const [activeTab, setActiveTab] = useState<'store' | 'widget' | 'prizes'>('store')
+  const [activeTab, setActiveTab] = useState<'store' | 'widget' | 'prizes' | 'success'>('store')
   const { createWheel } = useCark()
   const [logoPreview, setLogoPreview] = useState<string | null>(null)
+  const [embedCode, setEmbedCode] = useState<string>('')
+  const [shopId, setShopId] = useState<string>('')
 
   const [formData, setFormData] = useState<WheelFormData>(initialFormData)
 
-  const handleSubmit = () => {
-    // Basit validasyon - mağaza adı ve en az 3 ödül gerekli
-    if (formData.storeName.trim() && formData.prizes.length >= 3) {
-      createWheel(formData.storeName.trim())
-      // Reset form
-      setFormData(initialFormData)
-      setLogoPreview(null)
-      setActiveTab('store')
-      setOpen(false)
+  const handleSubmit = async () => {
+    // Validasyon
+    if (!formData.storeId.trim()) {
+      alert('Lütfen Mağaza ID girin')
+      return
+    }
+    if (formData.prizes.length < 3) {
+      alert('En az 3 ödül eklemelisiniz')
+      return
+    }
+    if (totalChance !== 100) {
+      alert('Toplam şans %100 olmalıdır')
+      return
+    }
+
+    // Supabase'e kaydet
+    const result = await createWheel({
+      storeId: formData.storeId.trim(),
+      storeName: formData.storeName.trim(),
+      logoUrl: formData.logoUrl,
+      websiteUrl: formData.websiteUrl,
+      brandName: formData.brandName,
+      contactInfoType: formData.contactInfoType,
+      widgetTitle: formData.widgetTitle,
+      widgetDescription: formData.widgetDescription,
+      buttonText: formData.buttonText,
+      backgroundColor: formData.backgroundColor,
+      buttonColor: formData.buttonColor,
+      autoShow: formData.autoShow,
+      showDelay: formData.showDelay,
+      prizes: formData.prizes.map(p => ({
+        name: p.name,
+        description: p.description,
+        redirectUrl: p.redirectUrl,
+        color: p.color,
+        chance: p.chance,
+        couponCodes: p.couponCodes
+      }))
+    })
+
+    if (result.success && result.wheel) {
+      // Başarılı - embed kodu göster
+      setShopId(formData.storeId.trim())
+      setEmbedCode(result.wheel.embed_code || '')
+      setActiveTab('success')
+    } else {
+      alert('Hata: ' + (result.error || 'Çark oluşturulamadı'))
     }
   }
 
@@ -257,7 +297,7 @@ export function CarkCreateDrawer() {
         {/* Scrollable Content */}
         <div className="flex-1 overflow-y-auto px-6 py-5 sm:px-8 sm:py-6">
           <Tabs value={activeTab} onValueChange={(v) => setActiveTab(v as any)} className="w-full">
-            <TabsList className="grid w-full grid-cols-3 mb-5 sm:mb-7 h-11 p-1 bg-muted/50">
+            <TabsList className="grid w-full grid-cols-4 mb-5 sm:mb-7 h-11 p-1 bg-muted/50">
               <TabsTrigger value="store" className="text-sm">
                 <Store className="h-3.5 w-3.5 mr-1" />
                 Mağaza
@@ -270,6 +310,12 @@ export function CarkCreateDrawer() {
                 <Gift className="h-3.5 w-3.5 mr-1" />
                 Ödüller
               </TabsTrigger>
+              {embedCode && (
+                <TabsTrigger value="success" className="text-sm text-green-600">
+                  <Sparkles className="h-3.5 w-3.5 mr-1" />
+                  Tamamlandı
+                </TabsTrigger>
+              )}
             </TabsList>
 
             {/* Mağaza Bilgileri */}
@@ -720,6 +766,64 @@ export function CarkCreateDrawer() {
               </div>
               )}
             </TabsContent>
+
+            {/* Başarılı - Embed Kodu */}
+            {embedCode && (
+              <TabsContent value="success" className="mt-3">
+                <div className="text-center space-y-6 py-8">
+                  <div className="inline-flex items-center justify-center w-16 h-16 rounded-full bg-green-100 mb-4">
+                    <Sparkles className="h-8 w-8 text-green-600" />
+                  </div>
+                  <h3 className="text-xl font-bold text-green-600">Çark Başarıyla Oluşturuldu!</h3>
+                  <p className="text-sm text-muted-foreground">
+                    Çarkınız Supabase'e kaydedildi. Aşağıdaki embed kodunu sitenize ekleyin.
+                  </p>
+
+                  <div className="bg-muted/50 rounded-lg p-4 text-left">
+                    <div className="flex items-center justify-between mb-2">
+                      <Label className="text-sm font-medium">Embed Kodu</Label>
+                      <Button
+                        size="sm"
+                        variant="ghost"
+                        onClick={() => {
+                          navigator.clipboard.writeText(embedCode)
+                        }}
+                        className="h-8 px-2"
+                      >
+                        <Copy className="h-3.5 w-3.5 mr-1" />
+                        Kopyala
+                      </Button>
+                    </div>
+                    <pre className="text-xs bg-background p-3 rounded border overflow-x-auto">
+                      <code className="text-wrap break-all">{embedCode}</code>
+                    </pre>
+                  </div>
+
+                  <div className="space-y-3 text-sm text-left bg-blue-50 dark:bg-blue-950/20 p-4 rounded-lg border border-blue-200 dark:border-blue-900">
+                    <p className="font-medium text-blue-900 dark:text-blue-100">📌 Sonraki Adımlar:</p>
+                    <ol className="list-decimal list-inside space-y-1 text-muted-foreground ml-4">
+                      <li>Embed kodunu kopyalayın</li>
+                      <li>Sitenizin HTML'ine ekleyin</li>
+                      <li>API sunucusunu çalıştırın (Railway/Render)</li>
+                      <li><code className="bg-muted px-1 rounded">widget.js</code> dosyasını aynı domain'e yükleyin</li>
+                    </ol>
+                  </div>
+
+                  <Button
+                    onClick={() => {
+                      setActiveTab('store')
+                      setFormData(initialFormData)
+                      setLogoPreview(null)
+                      setEmbedCode('')
+                      setShopId('')
+                    }}
+                    variant="outline"
+                  >
+                    Yeni Çark Oluştur
+                  </Button>
+                </div>
+              </TabsContent>
+            )}
           </Tabs>
         </div>
 
@@ -739,7 +843,12 @@ export function CarkCreateDrawer() {
             </span>
           </div>
           <div className="flex items-center gap-2">
-            {activeTab === 'prizes' ? (
+            {embedCode ? (
+              <Button onClick={() => setActiveTab('success')} className="w-full sm:min-w-[120px] bg-green-600 hover:bg-green-700 shadow-lg">
+                <Sparkles className="mr-2 h-4 w-4" />
+                Tamamlandı
+              </Button>
+            ) : activeTab === 'prizes' ? (
               <Button onClick={handleSubmit} disabled={!isFormValid || totalChance !== 100} className="w-full sm:min-w-[120px] shadow-lg shadow-primary/20">
                 Çark Oluştur
               </Button>
