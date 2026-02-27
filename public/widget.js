@@ -28,10 +28,17 @@
   // ============================================
 
   function init() {
+    console.log('🎡 Çarkıfelek Widget initializing...');
+
     const widgetScript = document.getElementById('carkifelek-widget-script');
-    if (!widgetScript) return;
+    if (!widgetScript) {
+      console.error('❌ Widget script not found!');
+      return;
+    }
 
     CONFIG.shopToken = widgetScript.getAttribute('data-shop-token') || '';
+    console.log('📝 Shop token:', CONFIG.shopToken ? 'found' : 'NOT FOUND');
+    console.log('🌐 API Base URL:', CONFIG.apiBaseUrl);
 
     // Derive API base URL from script src
     const scriptSrc = widgetScript.src;
