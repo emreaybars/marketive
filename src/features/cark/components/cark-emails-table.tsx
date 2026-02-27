@@ -20,7 +20,8 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Input } from '@/components/ui/input'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
-import { Mail, Search, ArrowUpDown } from 'lucide-react'
+import { Mail, Search, ArrowUpDown, RefreshCw } from 'lucide-react'
+import { useCark, WheelSpinResult } from './cark-provider'
 
 interface DataTableProps<TData, TValue> {
   columns: ColumnDef<TData, TValue>[]
@@ -75,7 +76,7 @@ export function DataTable<TData, TValue>({
           ) : (
             <TableRow>
               <TableCell colSpan={columns.length} className="h-24 text-center">
-                Sonuç bulunamadı.
+                Henüz çark dönüşü yok.
               </TableCell>
             </TableRow>
           )}
@@ -85,108 +86,26 @@ export function DataTable<TData, TValue>({
   )
 }
 
-// Email veri tipi
-interface EmailData {
-  id: string
-  email: string
-  prize: string
-  sentAt: string
-}
-
-// Mock email verileri
-const mockEmails: EmailData[] = [
-  {
-    id: '1',
-    email: 'ahmet.yilmaz@example.com',
-    prize: '100TL İndirim',
-    sentAt: '2024-06-30T14:30:00',
-  },
-  {
-    id: '2',
-    email: 'ayse.demir@example.com',
-    prize: 'Ücretsiz Kargo',
-    sentAt: '2024-06-30T14:25:00',
-  },
-  {
-    id: '3',
-    email: 'mehmet.kaya@example.com',
-    prize: '50TL Hediye Çeki',
-    sentAt: '2024-06-30T14:20:00',
-  },
-  {
-    id: '4',
-    email: 'fatma.ozturk@example.com',
-    prize: '100TL İndirim',
-    sentAt: '2024-06-30T14:15:00',
-  },
-  {
-    id: '5',
-    email: 'ali.celik@example.com',
-    prize: '200TL İndirim',
-    sentAt: '2024-06-30T14:10:00',
-  },
-  {
-    id: '6',
-    email: 'zeynep.aras@example.com',
-    prize: 'Ücretsiz Kargo',
-    sentAt: '2024-06-30T14:05:00',
-  },
-  {
-    id: '7',
-    email: 'mustafa.eren@example.com',
-    prize: '100TL İndirim',
-    sentAt: '2024-06-30T14:00:00',
-  },
-  {
-    id: '8',
-    email: 'elif.yildiz@example.com',
-    prize: '50TL Hediye Çeki',
-    sentAt: '2024-06-30T13:55:00',
-  },
-  {
-    id: '9',
-    email: 'can.bozkurt@example.com',
-    prize: 'Ücretsiz Kargo',
-    sentAt: '2024-06-30T13:50:00',
-  },
-  {
-    id: '10',
-    email: 'deniz.sahin@example.com',
-    prize: '100TL İndirim',
-    sentAt: '2024-06-30T13:45:00',
-  },
-  {
-    id: '11',
-    email: 'emre.turk@example.com',
-    prize: '200TL İndirim',
-    sentAt: '2024-06-30T13:40:00',
-  },
-  {
-    id: '12',
-    email: 'selin.aydin@example.com',
-    prize: 'Ücretsiz Kargo',
-    sentAt: '2024-06-30T13:35:00',
-  },
-]
-
 export function CarkEmailsTable() {
-  const [emails] = React.useState<EmailData[]>(mockEmails)
+  const { wheelSpins, loading, refreshWheelSpins } = useCark()
   const [searchQuery, setSearchQuery] = React.useState('')
 
   // Filtreleme
-  const filteredEmails = React.useMemo(() => {
-    return emails.filter((email) => {
+  const filteredSpins = React.useMemo(() => {
+    return wheelSpins.filter((spin) => {
+      const searchTerm = searchQuery.toLowerCase()
       return (
-        email.email.toLowerCase().includes(searchQuery.toLowerCase()) ||
-        email.prize.toLowerCase().includes(searchQuery.toLowerCase())
+        (spin.email?.toLowerCase().includes(searchTerm) || false) ||
+        (spin.phone?.toLowerCase().includes(searchTerm) || false) ||
+        spin.prize_name.toLowerCase().includes(searchTerm)
       )
     })
-  }, [emails, searchQuery])
+  }, [wheelSpins, searchQuery])
 
   // Kolon tanımları
-  const columns: ColumnDef<EmailData>[] = [
+  const columns: ColumnDef<WheelSpinResult>[] = [
     {
-      accessorKey: 'email',
+      accessorKey: 'contact',
       header: ({ column }) => {
         return (
           <Button
@@ -194,17 +113,23 @@ export function CarkEmailsTable() {
             onClick={() => column.toggleSorting(column.getIsSorted() === 'asc')}
             className="h-8 px-0"
           >
-            E-posta
+            İletişim
             <ArrowUpDown className="ml-2 h-3 w-3" />
           </Button>
         )
       },
-      cell: ({ row }) => (
-        <div className="font-medium">{row.getValue('email')}</div>
-      ),
+      cell: ({ row }) => {
+        const email = row.original.email
+        const phone = row.original.phone
+        return (
+          <div className="font-medium">
+            {email || phone || '-'}
+          </div>
+        )
+      },
     },
     {
-      accessorKey: 'prize',
+      accessorKey: 'prize_name',
       header: ({ column }) => {
         return (
           <Button
@@ -219,12 +144,26 @@ export function CarkEmailsTable() {
       },
       cell: ({ row }) => (
         <Badge variant="secondary" className="font-normal">
-          {row.getValue('prize')}
+          {row.getValue('prize_name')}
         </Badge>
       ),
     },
     {
-      accessorKey: 'sentAt',
+      accessorKey: 'coupon_code',
+      header: 'Kupon Kodu',
+      cell: ({ row }) => {
+        const code = row.original.coupon_code
+        return code ? (
+          <code className="px-2 py-1 rounded bg-muted text-sm font-mono">
+            {code}
+          </code>
+        ) : (
+          <span className="text-muted-foreground text-sm">-</span>
+        )
+      },
+    },
+    {
+      accessorKey: 'created_at',
       header: ({ column }) => {
         return (
           <Button
@@ -238,7 +177,7 @@ export function CarkEmailsTable() {
         )
       },
       cell: ({ row }) => {
-        const date = new Date(row.getValue('sentAt'))
+        const date = new Date(row.getValue('created_at'))
         return (
           <div className="text-muted-foreground text-sm">
             {date.toLocaleDateString('tr-TR', {
@@ -261,28 +200,41 @@ export function CarkEmailsTable() {
           <div>
             <CardTitle className="flex items-center gap-2">
               <Mail className="h-5 w-5 text-primary" />
-              Son E-posta Verileri
+              Çark Dönüşleri
             </CardTitle>
             <p className="mt-1 text-sm text-muted-foreground">
-              Çarktan gelen e-posta kayıtları ({filteredEmails.length} kayıt)
+              Çarkı çeviren kullanıcılar ve kazandıkları ödüller ({filteredSpins.length} kayıt)
             </p>
           </div>
 
-          {/* Arama */}
-          <div className="relative w-full sm:w-[300px]">
-            <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
-            <Input
-              placeholder="E-posta veya ödül ara..."
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-              className="pl-9"
-            />
+          <div className="flex items-center gap-2 w-full sm:w-auto">
+            {/* Arama */}
+            <div className="relative flex-1 sm:w-[200px]">
+              <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+              <Input
+                placeholder="E-posta, telefon veya ödül ara..."
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                className="pl-9"
+              />
+            </div>
+
+            {/* Yenile butonu */}
+            <Button
+              variant="outline"
+              size="icon"
+              onClick={refreshWheelSpins}
+              disabled={loading}
+              title="Yenile"
+            >
+              <RefreshCw className={`h-4 w-4 ${loading ? 'animate-spin' : ''}`} />
+            </Button>
           </div>
         </div>
       </CardHeader>
 
       <CardContent>
-        <DataTable columns={columns} data={filteredEmails} />
+        <DataTable columns={columns} data={filteredSpins} />
       </CardContent>
     </Card>
   )

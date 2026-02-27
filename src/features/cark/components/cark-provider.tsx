@@ -5,8 +5,8 @@ import { createClient } from '@supabase/supabase-js'
 import { generateWidgetToken } from '@/lib/widget-token'
 
 // Supabase client
-const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || 'https://qiiygcclanmgzlrcpmle.supabase.co'
-const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || ''
+const supabaseUrl = import.meta.env.VITE_SUPABASE_URL || 'https://qiiygcclanmgzlrcpmle.supabase.co'
+const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY || ''
 const supabase = createClient(supabaseUrl, supabaseAnonKey)
 
 interface Wheel {
@@ -46,6 +46,17 @@ interface Prize {
   active: boolean
 }
 
+// Wheel spin result (won prize)
+interface WheelSpinResult {
+  id: string
+  shop_id: string
+  email: string | null
+  phone: string | null
+  prize_name: string
+  coupon_code: string | null
+  created_at: string
+}
+
 interface CreateWheelData {
   storeId: string
   storeName: string
@@ -72,17 +83,20 @@ interface CreateWheelData {
 
 interface CarkContextType {
   wheels: Wheel[]
+  wheelSpins: WheelSpinResult[]
   loading: boolean
   createWheel: (data: CreateWheelData) => Promise<{ success: boolean; error?: string; wheel?: Wheel }>
   updateWheel: (id: string, data: Partial<Wheel>) => Promise<void>
   deleteWheel: (id: string) => Promise<void>
   refreshWheels: () => Promise<void>
+  refreshWheelSpins: () => Promise<void>
 }
 
 const CarkContext = createContext<CarkContextType | undefined>(undefined)
 
 export function CarkProvider({ children }: { children: ReactNode }) {
   const [wheels, setWheels] = useState<Wheel[]>([])
+  const [wheelSpins, setWheelSpins] = useState<WheelSpinResult[]>([])
   const [loading, setLoading] = useState(false)
 
   // Fetch all wheels (shops)
@@ -165,7 +179,7 @@ export function CarkProvider({ children }: { children: ReactNode }) {
       if (prizesError) throw prizesError
 
       // 4. Generate embed code
-      const apiBaseUrl = process.env.NEXT_PUBLIC_API_URL || window.location.origin
+      const apiBaseUrl = import.meta.env.VITE_API_URL || window.location.origin
       const token = await generateWidgetToken(data.storeId, shop.id)
       const embedCode = `<!-- Çarkıfelek Widget -->
 <script id="carkifelek-widget-script"
@@ -240,13 +254,52 @@ export function CarkProvider({ children }: { children: ReactNode }) {
     }
   }
 
+  // Fetch all wheel spin results (won prizes)
+  const refreshWheelSpins = async () => {
+    setLoading(true)
+    try {
+      const { data, error } = await supabase
+        .from('won_prizes')
+        .select(`
+          id,
+          shop_id,
+          email,
+          phone,
+          coupon_code,
+          created_at,
+          prize:prizes(name)
+        `)
+        .order('created_at', { ascending: false })
+
+      if (error) throw error
+
+      // Transform data to match our interface
+      const transformedData: WheelSpinResult[] = (data || []).map((item: any) => ({
+        id: item.id,
+        shop_id: item.shop_id,
+        email: item.email,
+        phone: item.phone,
+        prize_name: item.prize?.name || 'Bilinmeyen Ödül',
+        coupon_code: item.coupon_code,
+        created_at: item.created_at
+      }))
+
+      setWheelSpins(transformedData)
+    } catch (err) {
+      console.error('Error fetching wheel spins:', err)
+    } finally {
+      setLoading(false)
+    }
+  }
+
   // Fetch on mount
   useState(() => {
     refreshWheels()
+    refreshWheelSpins()
   })
 
   return (
-    <CarkContext.Provider value={{ wheels, loading, createWheel, updateWheel, deleteWheel, refreshWheels }}>
+    <CarkContext.Provider value={{ wheels, wheelSpins, loading, createWheel, updateWheel, deleteWheel, refreshWheels, refreshWheelSpins }}>
       {children}
     </CarkContext.Provider>
   )
@@ -259,3 +312,6 @@ export function useCark() {
   }
   return context
 }
+
+// Export types for use in other components
+export type { Wheel, Prize, CreateWheelData, WheelSpinResult }

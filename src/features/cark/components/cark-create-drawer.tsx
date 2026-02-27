@@ -295,7 +295,7 @@ export function CarkCreateDrawer() {
         {/* Scrollable Content */}
         <div className="flex-1 overflow-y-auto px-6 py-5 sm:px-8 sm:py-6">
           <Tabs value={activeTab} onValueChange={(v) => setActiveTab(v as any)} className="w-full">
-            <TabsList className="grid w-full grid-cols-4 mb-5 sm:mb-7 h-11 p-1 bg-muted/50">
+            <TabsList className={`grid w-full mb-5 sm:mb-7 h-11 p-1 bg-muted/50 ${embedCode ? 'grid-cols-4' : 'grid-cols-3'}`}>
               <TabsTrigger value="store" className="text-sm">
                 <Store className="h-3.5 w-3.5 mr-1" />
                 Mağaza

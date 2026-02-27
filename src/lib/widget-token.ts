@@ -4,7 +4,7 @@
  */
 
 export async function generateWidgetToken(shopId: string, shopUuid: string): Promise<string> {
-  const WIDGET_SECRET = import.meta.env.VITE_WIDGET_SECRET || 'default-secret'
+  const WIDGET_SECRET = import.meta.env.VITE_WIDGET_SECRET || 'change-me-in-production'
 
   const payload = {
     sid: shopId,
