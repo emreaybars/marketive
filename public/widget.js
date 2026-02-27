@@ -10,7 +10,7 @@
   // Configuration
   const CONFIG = {
     shopToken: '',
-    apiBaseUrl: '', // Will be derived from script src
+    apiBaseUrl: 'https://marketive-production.up.railway.app', // Railway API URL
   };
 
   // State
