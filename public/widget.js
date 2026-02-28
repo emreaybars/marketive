@@ -1,7 +1,7 @@
 /**
  * Çarkıfelek Widget - WhatsApp Green Premium Edition
  * Modern wheel with visible prize names, white modal, clean design
- * Version 5.2.0 - Enhanced spinning animation with confetti and sound
+ * Version 5.3.0 - Faster spin (4s, 5 rotations) + debug logging
  */
 
 (function() {
@@ -654,10 +654,10 @@
     var arcSize = (2 * Math.PI) / numPrizes;
     var prizeAngle = prizeIndex * arcSize + arcSize / 2;
 
-    // Calculate rotation to land on prize - more rotations for excitement
-    var rotations = 8; // Increase from 6 to 8
+    // Calculate rotation to land on prize
+    var rotations = 5; // Reduced for faster spin
     var targetAngle = 360 * rotations + (360 - prizeAngle * 180 / Math.PI) + 90;
-    var duration = 6000; // Increase from 5000 to 6000ms
+    var duration = 4000; // 4 seconds
     var startTime = Date.now();
 
     // Play tick sound during spin

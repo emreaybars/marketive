@@ -272,7 +272,12 @@ export function CarkProvider({ children }: { children: ReactNode }) {
         `)
         .order('created_at', { ascending: false })
 
-      if (error) throw error
+      if (error) {
+        console.error('Supabase error:', error)
+        throw error
+      }
+
+      console.log('Raw won_prizes data:', data)
 
       // Transform data to match our interface
       const transformedData: WheelSpinResult[] = (data || []).map((item: any) => ({
@@ -286,6 +291,7 @@ export function CarkProvider({ children }: { children: ReactNode }) {
         created_at: item.created_at
       }))
 
+      console.log('Transformed wheel spins:', transformedData)
       setWheelSpins(transformedData)
     } catch (err) {
       console.error('Error fetching wheel spins:', err)
