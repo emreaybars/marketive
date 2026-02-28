@@ -30,7 +30,7 @@ DECLARE
   v_shop_id TEXT;
   v_shop_uuid UUID;
   v_decoded TEXT;
-  v_payload JSON;
+  v_payload JSONB;
 BEGIN
   -- Base64URL'dan decode et (padding ekle)
   -- Base64URL: - yerine +, _ yerine /, padding yok
@@ -43,7 +43,7 @@ BEGIN
   );
 
   -- JSON parse
-  v_payload := v_decoded::json;
+  v_payload := v_decoded::jsonb;
 
   -- Token validation - signature check
   IF v_payload ? 'sig' IS NULL THEN
