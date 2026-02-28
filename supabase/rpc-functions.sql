@@ -53,7 +53,7 @@ BEGIN
   LIMIT 1;
 
   IF NOT FOUND THEN
-    RAISE EXCEPTION 'shop_not_found' USING ERCODE = '44004';
+    RAISE EXCEPTION 'shop_not_found' USING ERRCODE = '44004';
   END IF;
 
   -- Return shop data with widget settings and prizes
