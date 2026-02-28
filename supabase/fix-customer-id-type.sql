@@ -6,17 +6,32 @@
 
 -- Supabase SQL Editor'da çalıştırın:
 
--- 1. Drop the foreign key constraint if exists
+-- 1. First, drop all RLS policies that depend on customer_id
+DROP POLICY IF EXISTS "Users can view own shops" ON shops;
+DROP POLICY IF EXISTS "Users can insert own shops" ON shops;
+DROP POLICY IF EXISTS "Users can update own shops" ON shops;
+DROP POLICY IF EXISTS "Users can delete own shops" ON shops;
+
+-- 2. Drop the foreign key constraint if exists
 ALTER TABLE shops DROP CONSTRAINT IF EXISTS shops_customer_id_fkey;
 
--- 2. Change the column type from UUID to TEXT
+-- 3. Change the column type from UUID to TEXT
 ALTER TABLE shops ALTER COLUMN customer_id TYPE TEXT USING customer_id::TEXT;
 
--- 3. Add comment
+-- 4. Make the column nullable (for existing rows)
+ALTER TABLE shops ALTER COLUMN customer_id DROP NOT NULL;
+
+-- 5. Add comment
 COMMENT ON COLUMN shops.customer_id IS 'Clerk user ID (user_xxx format)';
 
--- 4. Since Clerk handles auth, disable RLS for now (app-level filtering)
+-- 6. Disable RLS (we use app-level filtering with Clerk)
 ALTER TABLE shops DISABLE ROW LEVEL SECURITY;
+
+-- 7. Disable RLS on related tables too
+ALTER TABLE widget_settings DISABLE ROW LEVEL SECURITY;
+ALTER TABLE prizes DISABLE ROW LEVEL SECURITY;
+ALTER TABLE won_prizes DISABLE ROW LEVEL SECURITY;
+ALTER TABLE wheel_spins DISABLE ROW LEVEL SECURITY;
 
 -- ============================================
 -- VERIFICATION
