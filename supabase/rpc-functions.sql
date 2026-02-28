@@ -70,7 +70,7 @@ BEGIN
 
   -- Return shop data with widget settings and prizes
   RETURN QUERY
-  SELECT
+  SELECT DISTINCT
     s.name AS shop_name,
     s.logo_url AS shop_logo,
     s.website_url AS shop_url,
@@ -98,10 +98,11 @@ BEGIN
           'display_order', p.display_order
         ) ORDER BY p.display_order
       )
+      FROM prizes p
+      WHERE p.shop_id = s.id AND p.active = true
     ) AS prizes
   FROM shops s
   LEFT JOIN widget_settings ws ON s.id = ws.shop_id
-  LEFT JOIN prizes p ON s.id = p.shop_id AND p.active = true
   WHERE s.id = v_shop_uuid
   LIMIT 1;
 END;
