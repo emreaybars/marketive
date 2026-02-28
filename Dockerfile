@@ -20,14 +20,17 @@ FROM base AS prod-deps
 COPY package*.json ./
 RUN npm ci --only=production
 
-# API Server Production Image
-FROM base AS api-server
-COPY --from=prod-deps /app/node_modules ./node_modules
-COPY server/ ./server/
-COPY package*.json ./
+# API Server Production Image (Widget API)
+FROM node:20-alpine AS widget-api
+WORKDIR /app
+COPY server/package.json ./server/
+COPY server/widget-api.js ./server/
+COPY public/ ./public/
+WORKDIR /app/server
+RUN npm ci --only=production
 EXPOSE 3001
 ENV NODE_ENV=production
-CMD ["npm", "run", "api:prod"]
+CMD ["node", "widget-api.js"]
 
 # Admin Panel Production Image
 FROM base AS admin-panel
