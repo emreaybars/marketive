@@ -42,7 +42,7 @@ BEGIN
     payload ? 'sig' IS NOT NULL;
 
   IF NOT FOUND THEN
-    RAISE EXCEPTION 'invalid_token' USING ERRCODE = '44004';
+    RAISE EXCEPTION 'invalid_token' USING ERRCODE = '45000';
   END IF;
 
   -- Shop'u bul
@@ -53,7 +53,7 @@ BEGIN
   LIMIT 1;
 
   IF NOT FOUND THEN
-    RAISE EXCEPTION 'shop_not_found' USING ERRCODE = '44004';
+    RAISE EXCEPTION 'shop_not_found' USING ERRCODE = '45000';
   END IF;
 
   -- Return shop data with widget settings and prizes
