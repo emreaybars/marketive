@@ -34,13 +34,16 @@ export function Cark() {
           </div>
         </div>
 
+        {/* İstatistikler */}
+        <CarkStats />
+
+        {/* Grafik */}
+        <CarkChart />
+
         {/* Çark Listesi */}
         <CarkWheelsList />
 
-        <CarkStats />
-
-        <CarkChart />
-
+        {/* E-posta Tablosu */}
         <CarkEmailsTable />
       </Main>
     </CarkProvider>

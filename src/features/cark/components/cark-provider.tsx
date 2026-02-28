@@ -1,6 +1,6 @@
 'use client'
 
-import { createContext, useContext, useState, useEffect, ReactNode } from 'react'
+import { createContext, useContext, useState, useEffect, useCallback, ReactNode } from 'react'
 import { createClient } from '@supabase/supabase-js'
 import { generateWidgetToken } from '@/lib/widget-token'
 import { useUser } from '@clerk/clerk-react'
@@ -83,15 +83,35 @@ interface CreateWheelData {
   }>
 }
 
+// Analytics statistics
+interface DailyStats {
+  date: string
+  spins: number
+  emails: number
+  phones: number
+}
+
+interface AnalyticsStats {
+  totalEmails: number
+  totalPhones: number
+  totalSpins: number
+  dailyStats: DailyStats[]
+  todaySpins: number
+  weekSpins: number
+  changeFromLastWeek: number
+}
+
 interface CarkContextType {
   wheels: Wheel[]
   wheelSpins: WheelSpinResult[]
   loading: boolean
+  analytics: AnalyticsStats | null
   createWheel: (data: CreateWheelData) => Promise<{ success: boolean; error?: string; wheel?: Wheel }>
   updateWheel: (id: string, data: Partial<Wheel>) => Promise<void>
   deleteWheel: (id: string) => Promise<void>
   refreshWheels: () => Promise<void>
   refreshWheelSpins: () => Promise<void>
+  calculateAnalytics: () => void
 }
 
 const CarkContext = createContext<CarkContextType | undefined>(undefined)
@@ -101,6 +121,7 @@ export function CarkProvider({ children }: { children: ReactNode }) {
   const [wheels, setWheels] = useState<Wheel[]>([])
   const [wheelSpins, setWheelSpins] = useState<WheelSpinResult[]>([])
   const [loading, setLoading] = useState(false)
+  const [analytics, setAnalytics] = useState<AnalyticsStats | null>(null)
 
   // Get Clerk user ID for Supabase queries
   const clerkUserId = user?.id
@@ -127,9 +148,15 @@ export function CarkProvider({ children }: { children: ReactNode }) {
 
       if (error) throw error
 
+      // Parse JSONB results
+      const wheels = (data || []).map((item: any) => {
+        const wheel = typeof item === 'string' ? JSON.parse(item) : item
+        return wheel
+      })
+
       // Generate embed codes for each wheel
       const wheelsWithEmbed = await Promise.all(
-        (data || []).map(async (wheel: any) => {
+        wheels.map(async (wheel: any) => {
           const token = await generateWidgetToken(wheel.shop_id, wheel.id)
           const domain = window.location.origin
           const embedCode = `<!-- Çarkıfelek Widget -->
@@ -341,17 +368,20 @@ export function CarkProvider({ children }: { children: ReactNode }) {
 
       if (error) throw error
 
-      // Transform data to match our interface
-      const transformedData: WheelSpinResult[] = (data || []).map((item: any) => ({
-        id: item.id,
-        shop_id: item.shop_id,
-        full_name: item.full_name,
-        email: item.email,
-        phone: item.phone,
-        prize_name: item.prize_name || 'Bilinmeyen Ödül',
-        coupon_code: item.coupon_code,
-        created_at: item.won_at
-      }))
+      // Parse JSONB results and transform to match our interface
+      const transformedData: WheelSpinResult[] = (data || []).map((item: any) => {
+        const spin = typeof item === 'string' ? JSON.parse(item) : item
+        return {
+          id: spin.spin_id,  // RPC function returns spin_id
+          shop_id: spin.shop_id,
+          full_name: spin.full_name,
+          email: spin.email,
+          phone: spin.phone,
+          prize_name: spin.prize_name || 'Bilinmeyen Ödül',
+          coupon_code: spin.coupon_code,
+          created_at: spin.won_at
+        }
+      })
 
       setWheelSpins(transformedData)
     } catch (err) {
@@ -360,6 +390,86 @@ export function CarkProvider({ children }: { children: ReactNode }) {
       setLoading(false)
     }
   }
+
+  // Calculate analytics from wheel spins
+  const calculateAnalytics = useCallback(() => {
+    if (!wheelSpins || wheelSpins.length === 0) {
+      setAnalytics({
+        totalEmails: 0,
+        totalPhones: 0,
+        totalSpins: 0,
+        dailyStats: [],
+        todaySpins: 0,
+        weekSpins: 0,
+        changeFromLastWeek: 0
+      })
+      return
+    }
+
+    // Count emails and phones
+    const totalEmails = wheelSpins.filter(s => s.email && s.email.trim() !== '').length
+    const totalPhones = wheelSpins.filter(s => s.phone && s.phone.trim() !== '').length
+    const totalSpins = wheelSpins.length
+
+    // Group by date for daily stats
+    const dailyMap = new Map<string, DailyStats>()
+
+    wheelSpins.forEach(spin => {
+      const date = new Date(spin.created_at)
+      const dateKey = date.toISOString().split('T')[0] // YYYY-MM-DD
+
+      const existing = dailyMap.get(dateKey) || {
+        date: dateKey,
+        spins: 0,
+        emails: 0,
+        phones: 0
+      }
+
+      existing.spins++
+      if (spin.email && spin.email.trim() !== '') existing.emails++
+      if (spin.phone && spin.phone.trim() !== '') existing.phones++
+
+      dailyMap.set(dateKey, existing)
+    })
+
+    // Convert map to array and sort by date
+    const dailyStats = Array.from(dailyMap.values()).sort((a, b) =>
+      new Date(a.date).getTime() - new Date(b.date).getTime()
+    )
+
+    // Calculate today's spins
+    const today = new Date().toISOString().split('T')[0]
+    const todaySpins = wheelSpins.filter(s =>
+      new Date(s.created_at).toISOString().split('T')[0] === today
+    ).length
+
+    // Calculate this week's spins (last 7 days)
+    const weekAgo = new Date()
+    weekAgo.setDate(weekAgo.getDate() - 7)
+    const weekSpins = wheelSpins.filter(s => new Date(s.created_at) >= weekAgo).length
+
+    // Calculate change from last week (previous 7 days)
+    const twoWeeksAgo = new Date(weekAgo)
+    twoWeeksAgo.setDate(twoWeeksAgo.getDate() - 7)
+    const lastWeekSpins = wheelSpins.filter(s => {
+      const date = new Date(s.created_at)
+      return date >= twoWeeksAgo && date < weekAgo
+    }).length
+
+    const changeFromLastWeek = lastWeekSpins > 0
+      ? ((weekSpins - lastWeekSpins) / lastWeekSpins) * 100
+      : weekSpins > 0 ? 100 : 0
+
+    setAnalytics({
+      totalEmails,
+      totalPhones,
+      totalSpins,
+      dailyStats,
+      todaySpins,
+      weekSpins,
+      changeFromLastWeek
+    })
+  }, [wheelSpins])
 
   // Fetch on mount and when user auth state changes
   useEffect(() => {
@@ -370,8 +480,13 @@ export function CarkProvider({ children }: { children: ReactNode }) {
     }
   }, [isUserLoaded, clerkUserId])
 
+  // Calculate analytics when wheelSpins changes
+  useEffect(() => {
+    calculateAnalytics()
+  }, [wheelSpins, calculateAnalytics])
+
   return (
-    <CarkContext.Provider value={{ wheels, wheelSpins, loading, createWheel, updateWheel, deleteWheel, refreshWheels, refreshWheelSpins }}>
+    <CarkContext.Provider value={{ wheels, wheelSpins, loading, analytics, createWheel, updateWheel, deleteWheel, refreshWheels, refreshWheelSpins, calculateAnalytics }}>
       {children}
     </CarkContext.Provider>
   )
@@ -386,4 +501,4 @@ export function useCark() {
 }
 
 // Export types for use in other components
-export type { Wheel, Prize, CreateWheelData, WheelSpinResult }
+export type { Wheel, Prize, CreateWheelData, WheelSpinResult, DailyStats, AnalyticsStats }

@@ -3,6 +3,7 @@
 import * as React from 'react'
 import { Area, AreaChart, CartesianGrid, XAxis, YAxis, Tooltip, ResponsiveContainer } from 'recharts'
 import { TrendingUp, Calendar } from 'lucide-react'
+import { useCark } from './cark-provider'
 
 import {
   Card,
@@ -27,140 +28,72 @@ import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { Calendar as CalendarComponent } from '@/components/ui/calendar'
 
-const chartData = [
-  { date: '2024-04-01', spins: 222 },
-  { date: '2024-04-02', spins: 97 },
-  { date: '2024-04-03', spins: 167 },
-  { date: '2024-04-04', spins: 242 },
-  { date: '2024-04-05', spins: 373 },
-  { date: '2024-04-06', spins: 301 },
-  { date: '2024-04-07', spins: 245 },
-  { date: '2024-04-08', spins: 409 },
-  { date: '2024-04-09', spins: 59 },
-  { date: '2024-04-10', spins: 261 },
-  { date: '2024-04-11', spins: 327 },
-  { date: '2024-04-12', spins: 292 },
-  { date: '2024-04-13', spins: 342 },
-  { date: '2024-04-14', spins: 137 },
-  { date: '2024-04-15', spins: 120 },
-  { date: '2024-04-16', spins: 138 },
-  { date: '2024-04-17', spins: 446 },
-  { date: '2024-04-18', spins: 364 },
-  { date: '2024-04-19', spins: 243 },
-  { date: '2024-04-20', spins: 89 },
-  { date: '2024-04-21', spins: 137 },
-  { date: '2024-04-22', spins: 224 },
-  { date: '2024-04-23', spins: 138 },
-  { date: '2024-04-24', spins: 387 },
-  { date: '2024-04-25', spins: 215 },
-  { date: '2024-04-26', spins: 75 },
-  { date: '2024-04-27', spins: 383 },
-  { date: '2024-04-28', spins: 122 },
-  { date: '2024-04-29', spins: 315 },
-  { date: '2024-04-30', spins: 454 },
-  { date: '2024-05-01', spins: 165 },
-  { date: '2024-05-02', spins: 293 },
-  { date: '2024-05-03', spins: 247 },
-  { date: '2024-05-04', spins: 385 },
-  { date: '2024-05-05', spins: 481 },
-  { date: '2024-05-06', spins: 498 },
-  { date: '2024-05-07', spins: 388 },
-  { date: '2024-05-08', spins: 149 },
-  { date: '2024-05-09', spins: 227 },
-  { date: '2024-05-10', spins: 293 },
-  { date: '2024-05-11', spins: 335 },
-  { date: '2024-05-12', spins: 197 },
-  { date: '2024-05-13', spins: 197 },
-  { date: '2024-05-14', spins: 448 },
-  { date: '2024-05-15', spins: 473 },
-  { date: '2024-05-16', spins: 338 },
-  { date: '2024-05-17', spins: 499 },
-  { date: '2024-05-18', spins: 315 },
-  { date: '2024-05-19', spins: 235 },
-  { date: '2024-05-20', spins: 177 },
-  { date: '2024-05-21', spins: 82 },
-  { date: '2024-05-22', spins: 81 },
-  { date: '2024-05-23', spins: 252 },
-  { date: '2024-05-24', spins: 294 },
-  { date: '2024-05-25', spins: 201 },
-  { date: '2024-05-26', spins: 213 },
-  { date: '2024-05-27', spins: 420 },
-  { date: '2024-05-28', spins: 233 },
-  { date: '2024-05-29', spins: 78 },
-  { date: '2024-05-30', spins: 340 },
-  { date: '2024-05-31', spins: 178 },
-  { date: '2024-06-01', spins: 178 },
-  { date: '2024-06-02', spins: 470 },
-  { date: '2024-06-03', spins: 103 },
-  { date: '2024-06-04', spins: 439 },
-  { date: '2024-06-05', spins: 88 },
-  { date: '2024-06-06', spins: 294 },
-  { date: '2024-06-07', spins: 323 },
-  { date: '2024-06-08', spins: 385 },
-  { date: '2024-06-09', spins: 438 },
-  { date: '2024-06-10', spins: 155 },
-  { date: '2024-06-11', spins: 92 },
-  { date: '2024-06-12', spins: 492 },
-  { date: '2024-06-13', spins: 81 },
-  { date: '2024-06-14', spins: 426 },
-  { date: '2024-06-15', spins: 307 },
-  { date: '2024-06-16', spins: 371 },
-  { date: '2024-06-17', spins: 475 },
-  { date: '2024-06-18', spins: 107 },
-  { date: '2024-06-19', spins: 341 },
-  { date: '2024-06-20', spins: 408 },
-  { date: '2024-06-21', spins: 169 },
-  { date: '2024-06-22', spins: 317 },
-  { date: '2024-06-23', spins: 480 },
-  { date: '2024-06-24', spins: 132 },
-  { date: '2024-06-25', spins: 141 },
-  { date: '2024-06-26', spins: 434 },
-  { date: '2024-06-27', spins: 448 },
-  { date: '2024-06-28', spins: 149 },
-  { date: '2024-06-29', spins: 103 },
-  { date: '2024-06-30', spins: 446 },
-]
-
 const primaryColor = 'oklch(0.62 0.19 252)'
 
-type DateRangeType = '7d' | '15d' | '30d' | '60d' | '90d' | 'custom'
+type DateRangeType = '7d' | '15d' | '30d' | '60d' | '90d' | 'all' | 'custom'
 
 export function CarkChart() {
-  const [dateRangeType, setDateRangeType] = React.useState<DateRangeType>('30d')
+  const { analytics } = useCark()
+  const [dateRangeType, setDateRangeType] = React.useState<DateRangeType>('all')
   const [startDate, setStartDate] = React.useState<Date | undefined>(undefined)
   const [endDate, setEndDate] = React.useState<Date | undefined>(undefined)
 
   // Custom tarih range kontrolü
   const isCustomRange = dateRangeType === 'custom'
 
-  // Veriyi filtrele
+  // Veriyi filtrele - analytics'ten gerçek veriyi kullan
   const filteredData = React.useMemo(() => {
+    if (!analytics || !analytics.dailyStats || analytics.dailyStats.length === 0) {
+      return []
+    }
+
+    let data = [...analytics.dailyStats]
+
     if (isCustomRange && startDate && endDate) {
-      return chartData.filter((item) => {
+      return data.filter((item) => {
         const date = new Date(item.date)
         return date >= startDate && date <= endDate
       })
     }
 
-    const referenceDate = new Date('2024-06-30')
+    // Tarih aralığı filtreleri
+    if (dateRangeType === 'all') {
+      return data
+    }
+
+    const now = new Date()
     let daysToSubtract = 30
     if (dateRangeType === '7d') daysToSubtract = 7
     else if (dateRangeType === '15d') daysToSubtract = 15
+    else if (dateRangeType === '30d') daysToSubtract = 30
     else if (dateRangeType === '60d') daysToSubtract = 60
     else if (dateRangeType === '90d') daysToSubtract = 90
 
-    const start = new Date(referenceDate)
+    const start = new Date(now)
     start.setDate(start.getDate() - daysToSubtract)
-    return chartData.filter((item) => {
+    start.setHours(0, 0, 0, 0)
+
+    return data.filter((item) => {
       const date = new Date(item.date)
       return date >= start
     })
-  }, [dateRangeType, startDate, endDate, isCustomRange])
+  }, [analytics, dateRangeType, startDate, endDate, isCustomRange])
 
   // Toplam ve ortalama hesapla
-  const totalSpins = React.useMemo(() => filteredData.reduce((sum, item) => sum + item.spins, 0), [filteredData])
-  const avgSpins = React.useMemo(() => Math.round(totalSpins / filteredData.length), [filteredData, totalSpins])
-  const maxSpins = React.useMemo(() => Math.max(...filteredData.map(d => d.spins)), [filteredData])
+  const totalSpins = React.useMemo(() => {
+    if (filteredData.length === 0) return 0
+    return filteredData.reduce((sum, item) => sum + item.spins, 0)
+  }, [filteredData])
+
+  const avgSpins = React.useMemo(() => {
+    if (filteredData.length === 0) return 0
+    return Math.round(totalSpins / filteredData.length)
+  }, [filteredData, totalSpins])
+
+  const maxSpins = React.useMemo(() => {
+    if (filteredData.length === 0) return 0
+    return Math.max(...filteredData.map(d => d.spins))
+  }, [filteredData])
 
   // X-axis için hangi index'lerin gösterileceğini hesapla (mobil için daha az etiket)
   const tickIndices = React.useMemo(() => {
@@ -188,6 +121,7 @@ export function CarkChart() {
       '30d': 'Son 30 gün',
       '60d': 'Son 60 gün',
       '90d': 'Son 90 gün',
+      'all': 'Tüm Zamanlar',
       'custom': 'Özel tarih'
     }
     return labels[dateRangeType]
@@ -241,6 +175,12 @@ export function CarkChart() {
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent className="rounded-xl" align="end">
+                  <SelectItem value="all">
+                    <span className="flex items-center gap-2">
+                      <span className="font-medium">Tümü</span>
+                      <span className="text-muted-foreground text-xs">Tüm Zamanlar</span>
+                    </span>
+                  </SelectItem>
                   <SelectItem value="7d">
                     <span className="flex items-center gap-2">
                       <span className="font-medium">7 Gün</span>
@@ -342,7 +282,7 @@ export function CarkChart() {
                     size="sm"
                     className="h-8 w-8 sm:w-auto sm:px-2 text-xs p-0 sm:p-auto"
                     onClick={() => {
-                      setDateRangeType('30d')
+                      setDateRangeType('all')
                       setStartDate(undefined)
                       setEndDate(undefined)
                     }}
@@ -369,6 +309,19 @@ export function CarkChart() {
       </CardHeader>
 
       <CardContent className="space-y-4 px-4 pb-6">
+        {/* Empty state */}
+        {filteredData.length === 0 ? (
+          <div className="flex flex-col items-center justify-center py-12 text-center">
+            <div className="rounded-full bg-primary/10 p-4 mb-4">
+              <TrendingUp className="h-8 w-8 text-primary" />
+            </div>
+            <h3 className="text-lg font-semibold mb-2">Henüz veri yok</h3>
+            <p className="text-sm text-muted-foreground max-w-xs">
+              Çark çevirme istatistikleri burada görüntülenecek. İlk çarkınızı oluşturun ve kullanıcılarınızın etkileşimini takip etmeye başlayın.
+            </p>
+          </div>
+        ) : (
+          <>
         {/* Yatay scroll ile chart alanı */}
         <div className="relative overflow-x-auto pb-2">
           {/* Scroll indicator - mobilde */}
@@ -481,6 +434,8 @@ export function CarkChart() {
           <span className="font-semibold text-primary">{maxSpins.toLocaleString()}</span>
           <span>çark çevirme</span>
         </div>
+          </>
+        )}
       </CardContent>
     </Card>
   )
