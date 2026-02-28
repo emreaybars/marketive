@@ -8,7 +8,7 @@
 
   // Supabase configuration
   const SUPABASE_URL = 'https://qiiygcclanmgzlrcpmle.supabase.co';
-  const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InFpaXlnY2NsYW5tZ3pscmNwbWxlIiwicm9sZSI6ImFub24iLCJleHAiOjE5MjAxMjM3NzQ5LCJpYXQiOiIxNzIyMjM3NzQ1In0.G1xXyL-3nXb04y_WtQCJR7tKQmGbIeY-aDmCGFdpnWPA';
+  const SUPABASE_ANON_KEY = 'sb_publishable_Z1ngToRO41r4D179j29cNg_ft2jMY7s';
 
   // State
   let widgetData = null;
