@@ -994,7 +994,7 @@
       var kvvkChecked = window.widgetConsents && window.widgetConsents.includes('kvvk');
       var ticaretChecked = window.widgetConsents && window.widgetConsents.includes('eticaret');
 
-      if (!kvkChecked || !ticaretChecked) {
+      if (!kvvkChecked || !ticaretChecked) {
         showResult('Lütfen zorunlu onayları kabul edin ✓', '#ef4444');
         var consentErrorEl = document.getElementById('carkifelek-consent-error');
         if (consentErrorEl) {
