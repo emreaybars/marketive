@@ -248,17 +248,20 @@ $$;
 DROP POLICY IF EXISTS "allow_public_widget_read" ON shops;
 DROP POLICY IF EXISTS "allow_public_widget_settings_read" ON widget_settings;
 DROP POLICY IF EXISTS "allow_public_prizes_read" ON prizes;
+DROP POLICY IF EXISTS "users_can_insert_shops" ON shops;
+DROP POLICY IF EXISTS "users_can_insert_widget_settings" ON widget_settings;
+DROP POLICY IF EXISTS "users_can_insert_prizes" ON prizes;
 DROP POLICY IF EXISTS "users_can_insert_won_prizes" ON won_prizes;
 DROP POLICY IF EXISTS "users_can_insert_wheel_spins" ON wheel_spins;
 DROP POLICY IF EXISTS "users_can_insert_views" ON widget_views;
 
--- Enable RLS
-ALTER TABLE shops ENABLE ROW LEVEL SECURITY;
-ALTER TABLE widget_settings ENABLE ROW LEVEL SECURITY;
-ALTER TABLE prizes ENABLE ROW LEVEL SECURITY;
-ALTER TABLE won_prizes ENABLE ROW LEVEL SECURITY;
-ALTER TABLE wheel_spins ENABLE ROW LEVEL SECURITY;
-ALTER TABLE widget_views ENABLE ROW LEVEL SECURITY;
+-- DISABLE RLS for development (enable later for production)
+ALTER TABLE shops DISABLE ROW LEVEL SECURITY;
+ALTER TABLE widget_settings DISABLE ROW LEVEL SECURITY;
+ALTER TABLE prizes DISABLE ROW LEVEL SECURITY;
+ALTER TABLE won_prizes DISABLE ROW LEVEL SECURITY;
+ALTER TABLE wheel_spins DISABLE ROW LEVEL SECURITY;
+ALTER TABLE widget_views DISABLE ROW LEVEL SECURITY;
 
 -- Herkes widget verilerini görebilir (RPC functions public)
 CREATE POLICY "allow_public_widget_read" ON shops
@@ -275,6 +278,22 @@ CREATE POLICY "allow_public_prizes_read" ON prizes
   FOR SELECT
   TO anon
   USING (true);
+
+-- Herkes insert yapabilsin (RLS enable edildiğinde gerekli)
+CREATE POLICY "allow_public_insert_shops" ON shops
+  FOR INSERT
+  TO anon
+  WITH CHECK (true);
+
+CREATE POLICY "allow_public_insert_widget_settings" ON widget_settings
+  FOR INSERT
+  TO anon
+  WITH CHECK (true);
+
+CREATE POLICY "allow_public_insert_prizes" ON prizes
+  FOR INSERT
+  TO anon
+  WITH CHECK (true);
 
 -- Sadece kendi shop'una veri yazabilsin
 CREATE POLICY "users_can_insert_won_prizes" ON won_prizes
