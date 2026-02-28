@@ -100,16 +100,27 @@ export function CarkProvider({ children }: { children: ReactNode }) {
   const [wheelSpins, setWheelSpins] = useState<WheelSpinResult[]>([])
   const [loading, setLoading] = useState(false)
 
-  // Fetch all wheels (shops)
+  // Fetch all wheels (shops) - SECURITY: Only user's own shops
   const refreshWheels = async () => {
     setLoading(true)
     try {
+      // Get current user
+      const { data: { user: currentUser } } = await supabase.auth.getUser()
+
+      if (!currentUser?.id) {
+        console.warn('Kullanıcı giriş yapmamış')
+        setWheels([])
+        setLoading(false)
+        return
+      }
+
       const { data, error } = await supabase
         .from('shops')
         .select(`
           *,
           widget_settings (*)
         `)
+        .eq('customer_id', currentUser.id) // SECURITY: Filter by current user
         .order('created_at', { ascending: false })
 
       if (error) throw error
@@ -143,11 +154,19 @@ export function CarkProvider({ children }: { children: ReactNode }) {
   const createWheel = async (data: CreateWheelData) => {
     setLoading(true)
     try {
-      // 1. Create shop
+      // Get current user - SECURITY: Associate shop with authenticated user
+      const { data: { user: currentUser } } = await supabase.auth.getUser()
+
+      if (!currentUser?.id) {
+        return { success: false, error: 'Oturum açmanız gerekiyor' }
+      }
+
+      // 1. Create shop with customer_id
       const { data: shop, error: shopError } = await supabase
         .from('shops')
         .insert({
           shop_id: data.storeId,
+          customer_id: currentUser.id, // SECURITY: Link to current user
           name: data.storeName,
           logo_url: data.logoUrl,
           website_url: data.websiteUrl,
@@ -230,10 +249,16 @@ export function CarkProvider({ children }: { children: ReactNode }) {
     }
   }
 
-  // Update wheel
+  // Update wheel - SECURITY: Only user's own shops
   const updateWheel = async (id: string, data: Partial<Wheel>) => {
     setLoading(true)
     try {
+      const { data: { user: currentUser } } = await supabase.auth.getUser()
+
+      if (!currentUser?.id) {
+        throw new Error('Oturum açmanız gerekiyor')
+      }
+
       const { error } = await supabase
         .from('shops')
         .update({
@@ -244,6 +269,7 @@ export function CarkProvider({ children }: { children: ReactNode }) {
           active: data.active
         })
         .eq('id', id)
+        .eq('customer_id', currentUser.id) // SECURITY: Only user's own shops
 
       if (error) throw error
       await refreshWheels()
@@ -254,14 +280,21 @@ export function CarkProvider({ children }: { children: ReactNode }) {
     }
   }
 
-  // Delete wheel
+  // Delete wheel - SECURITY: Only user's own shops
   const deleteWheel = async (id: string) => {
     setLoading(true)
     try {
+      const { data: { user: currentUser } } = await supabase.auth.getUser()
+
+      if (!currentUser?.id) {
+        throw new Error('Oturum açmanız gerekiyor')
+      }
+
       const { error } = await supabase
         .from('shops')
         .delete()
         .eq('id', id)
+        .eq('customer_id', currentUser.id) // SECURITY: Only user's own shops
 
       if (error) throw error
       await refreshWheels()
@@ -272,10 +305,34 @@ export function CarkProvider({ children }: { children: ReactNode }) {
     }
   }
 
-  // Fetch all wheel spin results (from won_prizes table)
+  // Fetch all wheel spin results - SECURITY: Only user's own shops' spins
   const refreshWheelSpins = async () => {
     setLoading(true)
     try {
+      // Get current user
+      const { data: { user: currentUser } } = await supabase.auth.getUser()
+
+      if (!currentUser?.id) {
+        console.warn('Kullanıcı giriş yapmamış')
+        setWheelSpins([])
+        setLoading(false)
+        return
+      }
+
+      // Get user's shop IDs first
+      const { data: userShops } = await supabase
+        .from('shops')
+        .select('id')
+        .eq('customer_id', currentUser.id)
+
+      const shopIds = userShops?.map((s: any) => s.id) || []
+
+      if (shopIds.length === 0) {
+        setWheelSpins([])
+        setLoading(false)
+        return
+      }
+
       // Query from won_prizes which has the correct prize_id relation
       const { data, error } = await supabase
         .from('won_prizes')
@@ -289,6 +346,7 @@ export function CarkProvider({ children }: { children: ReactNode }) {
           won_at,
           prize:prizes(name)
         `)
+        .in('shop_id', shopIds) // SECURITY: Only user's shops
         .order('won_at', { ascending: false })
 
       if (error) throw error
