@@ -29,7 +29,6 @@ AS $$
 DECLARE
   v_shop_id TEXT;
   v_shop_uuid UUID;
-  v_verified BOOLEAN;
 BEGIN
   -- Token'dan shop_id'yi al (base64url decode)
   SELECT
@@ -108,7 +107,7 @@ BEGIN
     SELECT 1 FROM won_prizes wp
     WHERE wp.shop_id = p_shop_uuid
       AND wp.email = LOWER(p_email)
-      AND wp.created_at > NOW() - INTERVAL '30 days'
+      AND wp.won_at > NOW() - INTERVAL '30 days'
   ) INTO v_used;
 
   RETURN COALESCE(v_used, false);
@@ -118,9 +117,8 @@ $$;
 -- 3. Çark dönüşü kaydet
 CREATE OR REPLACE FUNCTION log_wheel_spin(
   p_shop_uuid UUID,
-  p_prize_id INTEGER,
+  p_prize_id UUID,
   p_email TEXT DEFAULT NULL,
-  p_phone TEXT DEFAULT NULL,
   p_ip_address TEXT DEFAULT NULL,
   p_user_agent TEXT DEFAULT NULL
 )
@@ -130,46 +128,54 @@ SECURITY DEFINER
 AS $$
 DECLARE
   v_coupon_code TEXT;
+  v_prize_name TEXT;
+  v_spin_id UUID;
   v_result JSONB;
 BEGIN
   -- Ödül bilgilerini al
-  SELECT coupon_codes INTO v_coupon_code
+  SELECT coupon_codes, name INTO v_coupon_code, v_prize_name
   FROM prizes
   WHERE id = p_prize_id
     AND active = true
   LIMIT 1;
 
-  -- Kazanma kaydı oluştur
-  INSERT INTO won_prizes (
-    shop_id,
-    prize_id,
-    email,
-    phone,
-    coupon_code,
-    created_at
-  ) VALUES (
-    p_shop_uuid,
-    p_prize_id,
-    LOWER(p_email),
-    p_phone,
-    v_coupon_code,
-    NOW()
-  );
-
   -- Dönüş kaydı oluştur
   INSERT INTO wheel_spins (
     shop_id,
     email,
-    phone,
+    result,
+    prize_type,
+    coupon_code,
     ip_address,
     user_agent,
-    created_at
+    session_id,
+    spin_date
   ) VALUES (
     p_shop_uuid,
     LOWER(p_email),
-    p_phone,
+    'won',
+    'prize',
+    v_coupon_code,
     p_ip_address,
     p_user_agent,
+    gen_random_uuid()::text,
+    NOW()
+  ) RETURNING id INTO v_spin_id;
+
+  -- Kazanma kaydı oluştur
+  INSERT INTO won_prizes (
+    shop_id,
+    spin_id,
+    prize_id,
+    email,
+    coupon_code,
+    won_at
+  ) VALUES (
+    p_shop_uuid,
+    v_spin_id,
+    p_prize_id,
+    LOWER(p_email),
+    v_coupon_code,
     NOW()
   );
 
@@ -177,7 +183,8 @@ BEGIN
   SELECT jsonb_build_object(
     'success', true,
     'message', 'Spin logged successfully',
-    'coupon_code', v_coupon_code
+    'coupon_code', v_coupon_code,
+    'prize_name', v_prize_name
   ) INTO v_result;
 
   RETURN v_result;
@@ -202,10 +209,10 @@ BEGIN
     ip_address,
     user_agent,
     referrer,
-    created_at
+    viewed_at
   ) VALUES (
     p_shop_uuid,
-    gen_random_uuid(),
+    gen_random_uuid()::text,
     p_ip_address,
     p_user_agent,
     p_referrer,
@@ -215,8 +222,8 @@ BEGIN
   RETURN true;
 EXCEPTION
   WHEN OTHERS THEN
-  -- Hata olursa sessiziz devam et (analitik için kritik değil)
-  RETURN true;
+    -- Hata olursa sessizce devam et (analitik için kritik değil)
+    RETURN true;
 END;
 $$;
 
@@ -224,12 +231,13 @@ $$;
 -- RLS POLICY AYARLARI (güvenlik için)
 -- ============================================
 
-ALTER TABLE shops ENABLE ROW LEVEL SECURITY;
-ALTER TABLE widget_settings ENABLE ROW LEVEL SECURITY;
-ALTER TABLE prizes ENABLE ROW LEVEL SECURITY;
-ALTER TABLE won_prizes ENABLE ROW LEVEL SECURITY;
-ALTER TABLE wheel_spins ENABLE ROW LEVEL SECURITY;
-ALTER TABLE widget_views ENABLE ROW LEVEL SECURITY;
+-- Drop existing policies if they exist
+DROP POLICY IF EXISTS "allow_public_widget_read" ON shops;
+DROP POLICY IF EXISTS "allow_public_widget_settings_read" ON widget_settings;
+DROP POLICY IF EXISTS "allow_public_prizes_read" ON prizes;
+DROP POLICY IF EXISTS "users_can_insert_won_prizes" ON won_prizes;
+DROP POLICY IF EXISTS "users_can_insert_wheel_spins" ON wheel_spins;
+DROP POLICY IF EXISTS "users_can_insert_views" ON widget_views;
 
 -- Herkes widget verilerini görebilir (RPC functions public)
 CREATE POLICY "allow_public_widget_read" ON shops
@@ -264,19 +272,19 @@ CREATE POLICY "users_can_insert_views" ON widget_views
   WITH CHECK (true);
 
 -- ============================================
--- VARSAYILAN SORGUNLARİK INDEXLER
+-- VARSAYILAN SORGUNLARIK INDEXLER
 -- ============================================
 
 CREATE INDEX IF NOT EXISTS idx_shops_shop_id ON shops(shop_id) WHERE active = true;
 CREATE INDEX IF NOT EXISTS idx_prizes_shop_id ON prizes(shop_id) WHERE active = true;
 CREATE INDEX IF NOT EXISTS idx_won_prizes_shop_email ON won_prizes(shop_id, email);
-CREATE INDEX IF NOT EXISTS idx_wheel_spins_shop_created ON wheel_spins(shop_id, created_at);
+CREATE INDEX IF NOT EXISTS idx_wheel_spins_shop_spin_date ON wheel_spins(shop_id, spin_date);
 
 -- ============================================
--- TEST (İSTEY İÇİN)
+-- TEST (İSTEYE BAĞLI)
 -- ============================================
 
 -- Test widget data
 -- SELECT * FROM get_widget_data('TEST_TOKEN');
 
--- Her şey hazır! 🚀
+-- Her şey hazır!

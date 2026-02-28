@@ -129,7 +129,7 @@
     }
   }
 
-  async function logSpin(prizeId, email, phone) {
+  async function logSpin(prizeId, email) {
     if (!prizeId) return;
 
     try {
@@ -138,7 +138,6 @@
           p_shop_uuid: shopUuid,
           p_prize_id: prizeId,
           p_email: email,
-          p_phone: phone,
           p_ip_address: null,
           p_user_agent: navigator.userAgent
         });
