@@ -38,7 +38,7 @@ BEGIN
       convert_from(decode(replace(replace(p_token, '-', '+'), '_', '/'), 'base64'), 'utf8')::json AS payload
   ) t
   WHERE
-    payload ? 'sig' IS NOT NULL;
+    payload::jsonb ? 'sig' IS NOT NULL;
 
   IF NOT FOUND THEN
     RAISE EXCEPTION 'invalid_token' USING ERRCODE = '45000';
