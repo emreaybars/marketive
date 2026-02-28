@@ -1,7 +1,7 @@
 /**
  * Çarkıfelek Widget - WhatsApp Green Premium Edition
  * Modern wheel with visible prize names, white modal, clean design
- * Version 5.0.0
+ * Version 5.1.0 - Fixed radial text alignment and checkbox clicks
  */
 
 (function() {
@@ -434,7 +434,7 @@
   function getCheckboxStyles() {
     return 'display: flex; align-items: flex-start; gap: 10px; padding: 10px 12px;' +
            'border: 2px solid #e5e7eb; border-radius: 10px; cursor: pointer;' +
-           'background: #f9fafb; transition: all 0.2s ease;';
+           'background: #f9fafb; transition: all 0.2s ease; user-select: none;';
   }
 
   function getCheckboxBoxStyles() {
@@ -586,16 +586,17 @@
 
     wheelContext.save();
     wheelContext.translate(textX, textY);
-    wheelContext.rotate(midAngle + Math.PI / 2);
+    // Radial alignment: text reads outward from center
+    wheelContext.rotate(midAngle);
 
     // Text shadow for readability
-    wheelContext.shadowColor = 'rgba(0,0,0,0.5)';
+    wheelContext.shadowColor = 'rgba(0,0,0,0.6)';
     wheelContext.shadowBlur = 4;
     wheelContext.shadowOffsetX = 0;
     wheelContext.shadowOffsetY = 1;
 
     // Font settings
-    wheelContext.font = '700 11px -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif';
+    wheelContext.font = 'bold 11px -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif';
     wheelContext.textAlign = 'center';
     wheelContext.textBaseline = 'middle';
 
@@ -804,6 +805,9 @@
       if (errorEl) errorEl.style.display = 'none';
     }
   }
+
+  // Expose toggleConsent globally for inline onclick handlers
+  window.toggleConsent = toggleConsent;
 
   // ============================================
   // EVENT LISTENERS
