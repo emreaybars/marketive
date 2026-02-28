@@ -60,7 +60,7 @@ Ziyaretçi → Çark Çevir → Kazanır → Supabase (won_prizes, wheel_spins)
 - Arama ve sıralama özellikleri
 - Yenileme butonu
 
-### 6. Widget API (Vercel Edge Functions)
+### 6. Widget API
 
 #### Denenen Yöntemler:
 
@@ -80,27 +80,56 @@ Ziyaretçi → Çark Çevir → Kazanır → Supabase (won_prizes, wheel_spins)
   - Base64url decode düzeltmeleri
 - **Sonuç**: İptal edildi
 
-##### ✅ Vercel Edge Functions (api/ klasörü) - AKTIF ÇÖZÜM
+##### ❌ Vercel Edge Functions (api/ klasörü)
 - **Dosyalar**:
   - `/api/widget-data/route.ts`: Widget verilerini çeker
   - `/api/check-email/route.ts`: Email kontrolü
   - `/api/log-spin/route.ts`: Kazanma kaydı
   - `/api/view/route.ts`: View tracking
-
 - **Sorun**: Vite projesinde Next.js server modülleri çalışmıyor
-- **Çözüm**: API klasörünü kaldırdık
+- **Hata**: `Cannot find module 'next/server'`
+- **Sonuç**: API klasörü kaldırıldı
+
+##### ✅ Supabase RPC Functions - AKTIF ÇÖZÜM
+- **Dosya**: `/supabase/rpc-functions.sql`
+- **Fonksiyonlar**:
+  - `get_widget_data(p_token)`: Widget verilerini getirir
+  - `check_email_used(p_shop_uuid, p_email)`: Email kullanım kontrolü
+  - `log_wheel_spin(...)`: Dönüş kaydı oluşturur
+  - `track_widget_view(...)`: View tracking
+- **Avantajları**:
+  - CORS sorunu YOK (doğrudan DB bağlantısı)
+  - API katmanına gerek yok
+  - Widget client'tan Supabase'e direkt bağlanır
+- **Güvenlik**:
+  - Sadece anon key exposed (güvenli)
+  - RLS policies ile veri güvenliği
+  - Token based authentication
 
 ### 7. Widget.js (public/widget.js)
 
-#### API URL Değişiklikleri:
-1. Railway → Supabase Edge Functions → Vercel (Şu an Vercel'den akıyor)
-2. `apiBaseUrl`: `window.location.origin` (aynı domain)
+#### Son Versiyon - Supabase RPC Client
+- **Supabase Client**: Doğrudan widget içinde
+- **API Çağrıları**: RPC fonksiyonları ile
+- **CORS**: Yok (doğrudan DB bağlantısı)
 
-#### Endpoint Path'leri:
-- `/widget-data` → `/api/widget-data`
-- `/check-email` → `/api/check-email`
-- `/log-spin` → `/api/log-spin`
-- `/view` → `/api/view`
+**Kullanım**:
+```javascript
+// Supabase client initialization
+const { createClient } = supabase;
+const supabase = createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+
+// RPC call example
+const { data, error } = await supabase
+  .rpc('get_widget_data', {
+    p_token: token
+  });
+```
+
+#### Önceki Versiyonlar (Kullanımdan Kaldırıldı):
+1. Railway API → Supabase Edge Functions → Vercel Edge Functions
+2. `apiBaseUrl` değişimi ile domain değişiklikleri
+3. Fetch API ile endpoint çağrıları (CORS sorunlu)
 
 ---
 
@@ -124,10 +153,17 @@ VITE_WIDGET_SECRET=<secret_key>
 
 ### Deploy Komutları
 ```bash
+# Frontend ve Widget deploy
 git add -A
 git commit -m "message"
 git push origin main
 vercel --prod --yes
+
+# Supabase RPC fonksiyonları deploy
+# 1. Supabase Dashboard'a git
+# 2. SQL Editor'ü aç
+# 3. /supabase/rpc-functions.sql dosyasının içeriğini kopyala
+# 4. Run ile çalıştır
 ```
 
 ---
@@ -162,21 +198,29 @@ vercel --prod --yes
   - Dinamik origin kullanımı
 - **Sonuç**: Vercel Edge Functions'a geçildi (aynı domain, CORS yok)
 
+### Sorun 6: Widget.js Recursive Infinite Loop
+- **Hata**: `drawWheel()` fonksiyonu içinde kendini çağırıyordu
+- **Çözüm**: Wheel drawing kodu tek fonksiyonda birleştirildi, rotation ile render ayrıldı
+
+### Sorun 7: SQL Syntax Error
+- **Hata**: `ROW LEVEL LEVEL SECURITY` (çift LEVEL)
+- **Çözüm**: `ROW LEVEL SECURITY` olarak düzeltildi
+
 ---
 
 ## ✅ Mevcut Durum (AKTİF)
 
-### Widget Çalışma Akışı
+### Widget Çalışma Akışı (RPC Versiyonu)
 1. **Kullanıcı** admin panelinden çark oluşturur
 2. **Supabase**'e kaydedilir (shops, widget_settings, prizes)
 3. **Embed kodu** oluşturulur (token ile birlikte)
 4. **Widget** siteye eklenir (`<script src=".../widget.js">`)
 5. **Ziyaretçi** siteyi ziyaret eder
 6. **Widget** Vercel'den yüklenir
-7. **API** Vercel Edge Functions'a istek atar
-8. **Supabase**'den veri çeker
+7. **Supabase Client** RPC ile doğrudan database'e bağlanır
+8. **PostgreSQL RPC fonksiyonları** veriyi döndürür
 9. **Çark** render edilir
-10. **Dönüş** sonucu Supabase'e kaydedilir
+10. **Dönüş** sonucu Supabase RPC ile kaydedilir
 
 ### Embed Kodu Örneği
 ```html
@@ -211,14 +255,16 @@ vercel --prod --yes
 
 ---
 
-## 🎯 Sonraki Adımlar
+## 🎯 Sonraki Adımler
 
 ### Yapılması Gerekenler:
-1. ✅ Vercel Edge Functions API'yi çalışır hale getirmek
-2. ✅ Widget.js'i stabilize etmek
+1. ✅ Supabase RPC fonksiyonlarını oluşturmak
+2. ✅ Widget.js'i RPC client ile güncellemek
 3. ✅ Embed kodunu düzeltmek
 4. ✅ Çark listesini göstermek
 5. ✅ Dönüş tablosunu Supabase'den çekmek
+6. ⏳ **RPC fonksiyonlarını Supabase'e deploy etmek**
+7. ⏳ **Widget'ı test etmek (CORS olmadan)**
 
 ### Test Edilmesi Gerekenler:
 1. ✅ Çark oluşturma

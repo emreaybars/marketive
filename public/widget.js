@@ -1,17 +1,18 @@
 /**
- * Çarkıfelek Widget - Secure Version
- * Uses token-based authentication through your own API
- * No Supabase keys exposed to client
+ * Çarkıfelek Widget - Supabase RPC Version
+ * No CORS issues! Direct database connection via Supabase
  */
 
 (function() {
   'use strict';
 
-  // Configuration
-  const CONFIG = {
-    shopToken: '',
-    apiBaseUrl: window.location.origin, // Same domain (Vercel)
-  };
+  // Supabase configuration
+  const SUPABASE_URL = 'https://qiiygcclanmgzlrcpmle.supabase.co';
+  const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InFpaXlnY2NsYW5tZ3pscmNwbWxlIiwicm9sZSI6ImFub24iLCJleHAiOjE5MjAxMjM3NzQ5LCJpYXQiOiIxNzIyMjM3NzQ1In0.G1xXyL-3nXb04y_WtQCJR7tKQmGbIeY-aDmCGFdpnWPA';
+
+  // Initialize Supabase client
+  const { createClient } = supabase;
+  const supabase = createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 
   // State
   let widgetData = null;
@@ -22,13 +23,14 @@
   let sessionEmail = null;
   let sessionPhone = null;
   let hasSpun = false;
+  let shopUuid = null;
 
   // ============================================
   // INITIALIZATION
   // ============================================
 
   function init() {
-    console.log('🎡 Çarkıfelek Widget initializing...');
+    console.log('🎡 Çarkıfelek Widget initializing (Supabase RPC)...');
 
     const widgetScript = document.getElementById('carkifelek-widget-script');
     if (!widgetScript) {
@@ -36,212 +38,361 @@
       return;
     }
 
-    CONFIG.shopToken = widgetScript.getAttribute('data-shop-token') || '';
-    console.log('📝 Shop token:', CONFIG.shopToken ? 'found' : 'NOT FOUND');
-    console.log('🌐 API Base URL:', CONFIG.apiBaseUrl);
+    const shopToken = widgetScript.getAttribute('data-shop-token') || widgetScript.getAttribute('data-wheel-id');
+    console.log('📝 Shop token:', shopToken ? 'found' : 'NOT FOUND');
 
-    // Derive API base URL from script src
-    const scriptSrc = widgetScript.src;
-    if (scriptSrc) {
-      const url = new URL(scriptSrc);
-      CONFIG.apiBaseUrl = `${url.protocol}//${url.hostname}`;
-      if (url.port) {
-        CONFIG.apiBaseUrl += `:${url.port}`;
-      }
-    }
-
-    // Check for previous spin
-    checkPreviousSpin();
-
-    // Fetch widget data
-    fetchWidgetData();
-
-    // Track widget view
-    trackWidgetView();
-  }
-
-  // ============================================
-  // API CALLS - VIA YOUR SECURE API
-  // ============================================
-
-  async function fetchWidgetData() {
-    if (!CONFIG.shopToken) {
-      console.error('Shop token not provided');
+    if (!shopToken) {
+      console.error('❌ Shop token not provided');
       return;
     }
 
-    try {
-      const response = await fetch(
-        `${CONFIG.apiBaseUrl}/api/widget-data?token=${encodeURIComponent(CONFIG.shopToken)}`,
-        {
-          method: 'GET',
-          headers: {
-            'Content-Type': 'application/json'
-          }
-        }
-      );
+    // Fetch widget data using RPC
+    fetchWidgetData(shopToken);
 
-      if (!response.ok) {
-        throw new Error(`HTTP error! status: ${response.status}`);
+    // Track widget view
+    trackWidgetView(shopToken);
+  }
+
+  // ============================================
+  // SUPABASE RPC CALLS
+  // ============================================
+
+  async function fetchWidgetData(token) {
+    try {
+      console.log('📡 Fetching widget data from Supabase RPC...');
+
+      const { data, error } = await supabase
+        .rpc('get_widget_data', {
+          p_token: token
+        });
+
+      if (error) {
+        console.error('RPC Error:', error);
+        console.error('Details:', error.message);
+        return;
       }
 
-      const data = await response.json();
-      widgetData = data;
+      if (!data || data.length === 0) {
+        console.error('No widget data found');
+        return;
+      }
+
+      const widget = data[0];
+      console.log('✅ Widget data loaded:', widget);
+
+      widgetData = {
+        shop: {
+          name: widget.shop_name,
+          logo: widget.shop_logo,
+          url: widget.shop_url,
+          brandName: widget.brand_name,
+          contactInfoType: widget.contact_info_type
+        },
+        widget: {
+          title: widget.widget_title,
+          description: widget.widget_description,
+          buttonText: widget.widget_button_text,
+          showOnLoad: widget.widget_show_on_load,
+          popupDelay: widget.widget_popup_delay,
+          backgroundColor: widget.widget_background_color,
+          buttonColor: widget.widget_button_color,
+          titleColor: widget.widget_title_color,
+          descriptionColor: widget.widget_description_color
+        },
+        prizes: widget.prizes || []
+      };
 
       // Render widget after data is loaded
       setTimeout(() => {
         renderWidget();
       }, widgetData.widget.showOnLoad ? widgetData.widget.popupDelay : 0);
 
-    } catch (error) {
-      console.error('Failed to fetch widget data:', error);
+    } catch (err) {
+      console.error('Failed to fetch widget data:', err);
     }
   }
 
-  async function checkEmailInDatabase(email) {
-    if (!widgetData || !email) return false;
+  async function checkEmailUsed(email) {
+    if (!email || !shopUuid) return false;
 
     try {
-      const response = await fetch(`${CONFIG.apiBaseUrl}/api/check-email`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          token: CONFIG.shopToken,
-          email: email
-        })
-      });
+      const { data } = await supabase
+        .rpc('check_email_used', {
+          p_shop_uuid: shopUuid,
+          p_email: email
+        });
 
-      const result = await response.json();
-      return result.exists || false;
-
-    } catch (error) {
-      console.error('Email check error:', error);
-      return false;
+      return data || false;
+    } catch (err) {
+      console.error('Check email error:', err);
+      return true; // Error assume used (safer)
     }
   }
 
-  async function logPrizeWin(prizeId, email, couponCode) {
-    if (!widgetData) return;
-
-    const sessionId = getSessionId();
+  async function logSpin(prizeId, email, phone) {
+    if (!prizeId) return;
 
     try {
-      await fetch(`${CONFIG.apiBaseUrl}/api/log-spin`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          token: CONFIG.shopToken,
-          prize_id: prizeId,
-          email: email,
-          coupon_code: couponCode,
-          session_id: sessionId
-        })
-      });
+      const { data } = await supabase
+        .rpc('log_wheel_spin', {
+          p_shop_uuid: shopUuid,
+          p_prize_id: prizeId,
+          p_email: email,
+          p_phone: phone,
+          p_ip_address: null,
+          p_user_agent: navigator.userAgent
+        });
 
-      // Store in localStorage
-      localStorage.setItem(`cark_${CONFIG.shopToken}_spun`, 'true');
-      localStorage.setItem(`cark_${CONFIG.shopToken}_email`, email);
-      localStorage.setItem(`cark_${CONFIG.shopToken}_date`, new Date().toISOString());
-
-    } catch (error) {
-      console.error('Failed to log prize:', error);
+      console.log('✅ Spin logged:', data);
+      return data;
+    } catch (err) {
+      console.error('Log spin error:', err);
     }
   }
 
-  async function trackWidgetView() {
-    const sessionId = getSessionId();
-
+  async function trackWidgetView(token) {
     try {
-      await fetch(`${CONFIG.apiBaseUrl}/api/view`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          token: CONFIG.shopToken,
-          session_id: sessionId
-        })
+      await supabase.rpc('track_widget_view', {
+        p_shop_uuid: shopUuid || '00000000-0000-0000-0000-000000000000',
+        p_ip_address: null,
+        p_user_agent: navigator.userAgent,
+        p_referrer: document.referrer
       });
-    } catch (error) {
-      // Don't fail on tracking errors
+    } catch (err) {
+      console.error('Track view error:', err);
     }
-
-    // Store view in localStorage
-    const views = JSON.parse(localStorage.getItem(`cark_views`) || '{}');
-    views[sessionId] = views[sessionId] || 0;
-    views[sessionId]++;
-    localStorage.setItem(`cark_views`, JSON.stringify(views));
   }
 
   // ============================================
-  // WHEEL RENDERING & SPIN LOGIC
+  // WHEEL RENDERING
   // ============================================
 
-  function createWheel(prizes) {
-    const container = document.getElementById('carkifelek-wheel-canvas');
-    if (!container) return;
+  function renderWidget() {
+    console.log('🎨 Rendering widget...');
 
-    container.innerHTML = '';
+    // Remove existing widget if any
+    const existing = document.getElementById('carkifelek-widget-container');
+    if (existing) {
+      existing.remove();
+    }
 
-    const canvas = document.createElement('canvas');
-    canvas.width = 400;
-    canvas.height = 400;
-    canvas.id = 'wheel-canvas';
-    container.appendChild(canvas);
+    // Create widget container
+    const container = document.createElement('div');
+    container.id = 'carkifelek-widget-container';
+    container.innerHTML = `
+      <div id="carkifelek-widget" style="
+        position: fixed;
+        bottom: 20px;
+        right: 20px;
+        z-index: 9999;
+        font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+      ">
+        <button id="carkifelek-toggle" style="
+          background: ${widgetData.widget.buttonColor || '#d10000'};
+          color: white;
+          border: none;
+          padding: 12px 24px;
+          border-radius: 50px;
+          font-weight: bold;
+          cursor: pointer;
+          font-size: 16px;
+          box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+          transition: transform 0.2s;
+        ">
+          ${widgetData.widget.buttonText || 'ÇARKI ÇEVİR'}
+        </button>
+      </div>
+
+      <div id="carkifelek-modal" style="
+        position: fixed;
+        top: 0;
+        left: 0;
+        right: 0;
+        bottom: 0;
+        background: rgba(0,0,0,0.8);
+        display: none;
+        justify-content: center;
+        align-items: center;
+        z-index: 10000;
+      ">
+        <div style="
+          background: ${widgetData.widget.backgroundColor || 'rgba(139,0,0,0.7)'};
+          border-radius: 20px;
+          padding: 30px;
+          max-width: 400px;
+          width: 90%;
+          text-align: center;
+          box-shadow: 0 10px 40px rgba(0,0,0,0.3);
+        ">
+          <div style="
+            color: ${widgetData.widget.titleColor || '#ffffff'};
+            font-size: 28px;
+            font-weight: bold;
+            margin-bottom: 10px;
+          ">
+            ${widgetData.widget.title.replace(/<br>/g, ' ')}
+          </div>
+          <div style="
+            color: ${widgetData.widget.descriptionColor || '#ffffff'};
+            font-size: 16px;
+            margin-bottom: 30px;
+          ">
+            ${widgetData.widget.description}
+          </div>
+          <div style="
+            width: 300px;
+            height: 300px;
+            margin: 0 auto;
+            position: relative;
+          ">
+            <canvas id="carkifelek-wheel" width="300" height="300" style="
+              border-radius: 50%;
+            "></canvas>
+          </div>
+          <div id="carkifelek-prize" style="
+            margin-top: 20px;
+            color: ${widgetData.widget.titleColor || '#ffffff'};
+            font-size: 18px;
+            font-weight: bold;
+          "></div>
+          <div id="carkifelek-input" style="
+            margin-top: 20px;
+            display: none;
+          ">
+            <input type="email" id="carkifelek-email" placeholder="E-posta adresiniz" style="
+              width: 100%;
+              padding: 12px;
+              border: none;
+              border-radius: 8px;
+              font-size: 14px;
+              box-sizing: border-box;
+              margin-bottom: 10px;
+            ">
+            <button id="carkifelek-submit" style="
+              width: 100%;
+              background: ${widgetData.widget.buttonColor || '#d10000'};
+              color: white;
+              border: none;
+              padding: 12px;
+              border-radius: 8px;
+              font-weight: bold;
+              cursor: pointer;
+              font-size: 16px;
+            ">
+              ÖDÜLÜ AL
+            </button>
+          </div>
+          <button id="carkifelek-close" style="
+            margin-top: 10px;
+            background: transparent;
+            color: ${widgetData.widget.titleColor || '#ffffff'};
+            border: 1px solid rgba(255,255,255,0.3);
+            padding: 8px 20px;
+            border-radius: 20px;
+            cursor: pointer;
+            font-size: 14px;
+          ">
+            Kapat
+          </button>
+        </div>
+      </div>
+    `;
+
+    document.body.appendChild(container);
+
+    // Setup event listeners
+    setupEventListeners();
+    drawWheel();
+  }
+
+  function setupEventListeners() {
+    // Toggle button
+    const toggleBtn = document.getElementById('carkifelek-toggle');
+    const modal = document.getElementById('carkifelek-modal');
+    const closeBtn = document.getElementById('carkifelek-close');
+    const submitBtn = document.getElementById('carkifelek-submit');
+    const emailInput = document.getElementById('carkifelek-email');
+
+    toggleBtn.addEventListener('click', () => {
+      modal.style.display = 'flex';
+      // Store shop UUID from token
+      const shopToken = document.getElementById('carkifelek-widget-script')
+        ?.getAttribute('data-shop-token');
+      if (shopToken) {
+        // Extract shop UUID from token (simplified)
+        const parts = shopToken.split('.');
+        if (parts.length === 3) {
+          const payload = JSON.parse(atob(parts[1]));
+          shopUuid = payload.uid || null;
+        }
+      }
+    });
+
+    closeBtn.addEventListener('click', () => {
+      modal.style.display = 'none';
+      resetWidget();
+    });
+
+    submitBtn.addEventListener('click', async () => {
+      const email = emailInput.value.trim();
+      if (!email) {
+        alert('Lütfen e-posta adresinizi girin.');
+        return;
+      }
+
+      if (!isValidEmail(email)) {
+        alert('Geçerli bir e-posta adresi girin.');
+        return;
+      }
+
+      const alreadyUsed = await checkEmailUsed(email);
+      if (alreadyUsed) {
+        alert('Bu e-posta adresi ile zaten çark çevirdiniz.');
+        return;
+      }
+
+      // Select prize and spin
+      const prizeId = selectPrize();
+      spinWheel(prizeId, email);
+    });
+
+    // Close modal when clicking outside
+    modal.addEventListener('click', (e) => {
+      if (e.target === modal) {
+        modal.style.display = 'none';
+        resetWidget();
+      }
+    });
+  }
+
+  // ============================================
+  // WHEEL LOGIC
+  // ============================================
+
+  function drawWheel() {
+    const canvas = document.getElementById('carkifelek-wheel');
+    if (!canvas) return;
 
     wheelCanvas = canvas;
     wheelContext = canvas.getContext('2d');
 
-    drawWheel(prizes);
-  }
+    const centerX = canvas.width / 2;
+    const centerY = canvas.height / 2;
+    const radius = canvas.width / 2 - 10;
+    const numPrizes = widgetData.prizes.length;
+    const arcSize = (2 * Math.PI) / numPrizes;
 
-  function drawWheel(prizes) {
-    if (!wheelContext) return;
+    widgetData.prizes.forEach((prize, index) => {
+      const startAngle = index * arcSize;
+      const endAngle = startAngle + arcSize - 0.05; // Small gap
 
-    const centerX = wheelCanvas.width / 2;
-    const centerY = wheelCanvas.height / 2;
-    const radius = Math.min(centerX, centerY) - 20;
-
-    wheelContext.clearRect(0, 0, wheelCanvas.width, wheelCanvas.height);
-
-    const totalPrizes = prizes.length;
-    const arcSize = (2 * Math.PI) / totalPrizes;
-
-    let currentAngle = currentRotation;
-
-    prizes.forEach((prize, index) => {
-      const startAngle = currentAngle;
-      const endAngle = currentAngle + arcSize;
-
-      // Draw slice
       wheelContext.beginPath();
       wheelContext.moveTo(centerX, centerY);
       wheelContext.arc(centerX, centerY, radius, startAngle, endAngle);
       wheelContext.closePath();
-
       wheelContext.fillStyle = prize.color;
       wheelContext.fill();
-
-      wheelContext.strokeStyle = '#ffffff';
-      wheelContext.lineWidth = 2;
       wheelContext.stroke();
-
-      // Draw text
-      wheelContext.save();
-      wheelContext.translate(centerX, centerY);
-      wheelContext.rotate(startAngle + arcSize / 2);
-      wheelContext.textAlign = 'right';
-      wheelContext.fillStyle = '#ffffff';
-      wheelContext.font = 'bold 14px Arial';
-      wheelContext.shadowColor = 'rgba(0,0,0,0.5)';
-      wheelContext.shadowBlur = 4;
-
-      const text = prize.name.length > 15
-        ? prize.name.substring(0, 12) + '...'
-        : prize.name;
-      wheelContext.fillText(text, radius - 20, 5);
-
-      wheelContext.restore();
-
-      currentAngle += arcSize;
     });
 
     // Draw center circle
@@ -252,370 +403,143 @@
 
     // Draw pointer
     wheelContext.beginPath();
-    wheelContext.moveTo(centerX + radius + 15, centerY);
-    wheelContext.lineTo(centerX + radius - 5, centerY - 15);
-    wheelContext.lineTo(centerX + radius - 5, centerY + 15);
+    wheelContext.moveTo(centerX + radius - 10, centerY);
+    wheelContext.lineTo(centerX + radius + 10, centerY - 5);
+    wheelContext.lineTo(centerX + radius + 10, centerY + 5);
     wheelContext.closePath();
-    wheelContext.fillStyle = '#ff4444';
+    wheelContext.fillStyle = '#ffffff';
     wheelContext.fill();
-    wheelContext.strokeStyle = '#ffffff';
-    wheelContext.lineWidth = 2;
-    wheelContext.stroke();
   }
 
-  function spinWheel() {
-    if (isSpinning || hasSpun) return;
-
-    const contactType = widgetData.shop.contactInfoType || 'email';
-    const emailInput = document.getElementById('cark-email-input');
-    const phoneInput = document.getElementById('cark-phone-input');
-
-    const email = contactType === 'email' ? emailInput?.value : sessionEmail;
-    const phone = contactType === 'phone' ? phoneInput?.value : sessionPhone;
-
-    if (contactType === 'email' && !isValidEmail(email)) {
-      showInputError('cark-email-input');
-      return;
-    }
-
-    if (contactType === 'phone' && !isValidPhone(phone)) {
-      showInputError('cark-phone-input');
-      return;
-    }
-
-    isSpinning = true;
-
-    if (contactType === 'email') {
-      sessionEmail = email;
-    } else {
-      sessionPhone = phone;
-    }
-
-    // Determine prize based on chances
-    const prizes = widgetData.prizes;
-    const totalChance = prizes.reduce((sum, p) => sum + p.chance, 0);
+  function selectPrize() {
+    // Weighted random selection based on prize chances
+    const totalChance = widgetData.prizes.reduce((sum, prize) => sum + prize.chance, 0);
     let random = Math.random() * totalChance;
-    let winningPrize = prizes[0];
 
-    for (const prize of prizes) {
+    for (const prize of widgetData.prizes) {
       random -= prize.chance;
       if (random <= 0) {
-        winningPrize = prize;
-        break;
+        return prize.id;
       }
     }
 
-    // Calculate rotation
-    const prizeIndex = prizes.indexOf(winningPrize);
-    const arcSize = (2 * Math.PI) / prizes.length;
-    const targetAngle = (2 * Math.PI) - (prizeIndex * arcSize) - (arcSize / 2);
-    const spins = 5 + Math.random() * 3;
-    const finalRotation = spins * 2 * Math.PI + targetAngle;
+    return widgetData.prizes[0].id;
+  }
 
-    // Animate
-    const duration = 5000;
-    const startTime = performance.now();
-    const startRotation = currentRotation;
+  async function spinWheel(prizeId, email) {
+    if (isSpinning) return;
 
-    function animate(currentTime) {
-      const elapsed = currentTime - startTime;
+    isSpinning = true;
+    const prize = widgetData.prizes.find(p => p.id === prizeId);
+    const targetRotation = 360 * 3 + Math.floor(Math.random() * 360); // At least 3 rotations
+    const duration = 3000 + Math.random() * 2000;
+    const startTime = Date.now();
+
+    function animate() {
+      const elapsed = Date.now() - startTime;
       const progress = Math.min(elapsed / duration, 1);
 
+      // Ease out cubic
       const easeOut = 1 - Math.pow(1 - progress, 3);
-      currentRotation = startRotation + (finalRotation * easeOut);
+      currentRotation = targetRotation * easeOut;
 
-      drawWheel(prizes);
+      drawWheel();
 
       if (progress < 1) {
         requestAnimationFrame(animate);
       } else {
         isSpinning = false;
-        hasSpun = true;
-
-        let couponCode = null;
-        if (winningPrize.coupons && winningPrize.coupons.length > 0) {
-          couponCode = winningPrize.coupons[0];
-        }
-
-        logPrizeWin(winningPrize.id, email || phone, couponCode);
-        showResult(winningPrize, couponCode);
+        showPrize(prize);
+        await logSpin(prizeId, email);
       }
     }
 
-    requestAnimationFrame(animate);
+    animate();
   }
 
-  // ============================================
-  // UI RENDERING
-  // ============================================
+  function drawWheel() {
+    const canvas = wheelCanvas;
+    const ctx = wheelContext;
+    const centerX = canvas.width / 2;
+    const centerY = canvas.height / 2;
+    const radius = canvas.width / 2 - 10;
+    const numPrizes = widgetData.prizes.length;
+    const arcSize = (2 * Math.PI) / numPrizes;
 
-  function renderWidget() {
-    if (!widgetData) return;
+    ctx.save();
+    ctx.translate(centerX, centerY);
+    ctx.rotate(currentRotation * Math.PI / 180);
+    ctx.translate(-centerX, -centerY);
 
-    if (document.getElementById('carkifelek-widget-container')) return;
+    // Draw wheel segments
+    widgetData.prizes.forEach((prize, index) => {
+      const startAngle = index * arcSize;
+      const endAngle = startAngle + arcSize - 0.05;
 
-    const container = document.createElement('div');
-    container.id = 'carkifelek-widget-container';
-    container.innerHTML = getWidgetHTML();
-
-    document.body.appendChild(container);
-
-    applyWidgetStyles();
-    createWheel(widgetData.prizes);
-    setupEventListeners();
-  }
-
-  function getWidgetHTML() {
-    const { shop, widget } = widgetData;
-    const contactType = shop.contactInfoType || 'email';
-
-    return `
-      <div id="carkifelek-widget" class="carkifelek-widget">
-        <div class="carkifelek-overlay" id="carkifelek-overlay"></div>
-        <div class="carkifelek-modal">
-          <button class="carkifelek-close" id="carkifelek-close-btn">&times;</button>
-
-          <div class="carkifelek-header">
-            <div class="carkifelek-brand">
-              ${shop.logo ? `<img src="${shop.logo}" alt="${shop.name}" class="carkifelek-logo">` : ''}
-              ${shop.brandName ? `<span class="carkifelek-brand-name">${shop.brandName}</span>` : ''}
-            </div>
-            <h2 class="carkifelek-title">${widget.title}</h2>
-            <p class="carkifelek-description">${widget.description}</p>
-          </div>
-
-          <div class="carkifelek-body">
-            <div class="carkifelek-wheel-container">
-              <div id="carkifelek-wheel-canvas"></div>
-            </div>
-
-            <div class="carkifelek-form" id="carkifelek-form">
-              ${contactType === 'email' ? `
-                <div class="carkifelek-input-group">
-                  <input type="email" id="cark-email-input" placeholder="E-posta adresiniz" class="carkifelek-input" />
-                </div>
-              ` : `
-                <div class="carkifelek-input-group">
-                  <input type="tel" id="cark-phone-input" placeholder="Telefon numaranız" class="carkifelek-input" />
-                </div>
-              `}
-
-              <button class="carkifelek-spin-btn" id="carkifelek-spin-btn">
-                ${widget.buttonText}
-              </button>
-            </div>
-
-            <div class="carkifelek-result" id="carkifelek-result" style="display: none;">
-              <div class="carkifelek-result-content">
-                <h3 class="carkifelek-result-title">Tebrikler! 🎉</h3>
-                <p class="carkifelek-result-message" id="cark-result-message"></p>
-                <div class="carkifelek-coupon" id="cark-coupon-container" style="display: none;">
-                  <p class="carkifelek-coupon-label">Kupon Kodunuz:</p>
-                  <div class="carkifelek-coupon-code" id="cark-coupon-code"></div>
-                </div>
-                <a href="#" class="carkifelek-cta-btn" id="cark-cta-btn" target="_blank">
-                  Ödülü Al
-                </a>
-              </div>
-            </div>
-          </div>
-        </div>
-
-        <button class="carkifelek-trigger" id="carkifelek-trigger-btn">
-          🎁
-        </button>
-      </div>
-    `;
-  }
-
-  function applyWidgetStyles() {
-    const style = document.createElement('style');
-    const { widget } = widgetData;
-
-    style.textContent = `
-      .carkifelek-widget { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; }
-      .carkifelek-overlay { position: fixed; inset: 0; background: rgba(0,0,0,0.7); z-index: 99998; }
-      .carkifelek-modal {
-        position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%);
-        width: 90%; max-width: 500px; max-height: 90vh; overflow-y: auto;
-        background: ${widget.backgroundColor || 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)'};
-        border-radius: 20px; z-index: 99999; box-shadow: 0 20px 60px rgba(0,0,0,0.3);
-      }
-      .carkifelek-close {
-        position: absolute; top: 15px; right: 15px; width: 32px; height: 32px;
-        border: none; background: rgba(255,255,255,0.2); color: white;
-        border-radius: 50%; cursor: pointer; font-size: 20px; z-index: 10;
-      }
-      .carkifelek-header { padding: 30px 20px; text-align: center; color: white; }
-      .carkifelek-brand { display: flex; align-items: center; justify-content: center; gap: 10px; margin-bottom: 15px; }
-      .carkifelek-logo { height: 40px; width: auto; }
-      .carkifelek-title {
-        font-size: 24px; font-weight: bold; margin: 0 0 10px;
-        color: ${widget.titleColor || '#ffffff'};
-      }
-      .carkifelek-description {
-        font-size: 14px; margin: 0; opacity: 0.9;
-        color: ${widget.descriptionColor || '#ffffff'};
-      }
-      .carkifelek-body { background: white; border-radius: 0 0 20px 20px; padding: 20px; }
-      .carkifelek-wheel-container { display: flex; justify-content: center; margin-bottom: 20px; }
-      #carkifelek-wheel-canvas canvas { max-width: 100%; height: auto; }
-      .carkifelek-input-group { margin-bottom: 15px; }
-      .carkifelek-input {
-        width: 100%; padding: 12px 16px; border: 2px solid #e5e7eb;
-        border-radius: 10px; font-size: 14px; box-sizing: border-box;
-      }
-      .carkifelek-input:focus { outline: none; border-color: #667eea; }
-      .carkifelek-spin-btn {
-        width: 100%; padding: 14px; border: none; border-radius: 10px;
-        background: ${widget.buttonColor || '#667eea'}; color: white;
-        font-size: 16px; font-weight: bold; cursor: pointer;
-        transition: transform 0.2s;
-      }
-      .carkifelek-spin-btn:hover { transform: scale(1.02); }
-      .carkifelek-spin-btn:disabled { opacity: 0.6; cursor: not-allowed; }
-      .carkifelek-result { text-align: center; padding: 20px; }
-      .carkifelek-result-title { font-size: 20px; font-weight: bold; color: #10b981; margin-bottom: 10px; }
-      .carkifelek-result-message { color: #6b7280; margin-bottom: 15px; }
-      .carkifelek-coupon { background: #f3f4f6; padding: 15px; border-radius: 10px; margin: 15px 0; }
-      .carkifelek-coupon-label { font-size: 12px; color: #6b7280; margin-bottom: 5px; }
-      .carkifelek-coupon-code {
-        font-size: 18px; font-weight: bold; color: #667eea;
-        letter-spacing: 2px; font-family: monospace;
-      }
-      .carkifelek-cta-btn {
-        display: inline-block; padding: 12px 24px; background: #10b981;
-        color: white; text-decoration: none; border-radius: 10px;
-        font-weight: bold;
-      }
-      .carkifelek-trigger {
-        position: fixed; bottom: 20px; right: 20px; width: 60px; height: 60px;
-        border: none; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-        color: white; border-radius: 50%; font-size: 28px; cursor: pointer;
-        z-index: 99997; box-shadow: 0 4px 20px rgba(102, 126, 234, 0.4);
-      }
-      .carkifelek-input-error { border-color: #ef4444 !important; }
-    `;
-
-    document.head.appendChild(style);
-  }
-
-  function setupEventListeners() {
-    document.getElementById('carkifelek-close-btn')?.addEventListener('click', closeWidget);
-    document.getElementById('carkifelek-overlay')?.addEventListener('click', closeWidget);
-    document.getElementById('carkifelek-spin-btn')?.addEventListener('click', spinWheel);
-    document.getElementById('carkifelek-trigger-btn')?.addEventListener('click', openWidget);
-
-    const input = document.getElementById('cark-email-input') || document.getElementById('cark-phone-input');
-    input?.addEventListener('keypress', (e) => {
-      if (e.key === 'Enter') {
-        spinWheel();
-      }
+      ctx.beginPath();
+      ctx.moveTo(centerX, centerY);
+      ctx.arc(centerX, centerY, radius, startAngle, endAngle);
+      ctx.closePath();
+      ctx.fillStyle = prize.color;
+      ctx.fill();
+      ctx.stroke();
     });
+
+    // Draw center circle
+    ctx.beginPath();
+    ctx.arc(centerX, centerY, 30, 0, 2 * Math.PI);
+    ctx.fillStyle = '#ffffff';
+    ctx.fill();
+
+    ctx.restore();
+
+    // Draw pointer (not rotated)
+    ctx.beginPath();
+    ctx.moveTo(centerX + radius - 10, centerY);
+    ctx.lineTo(centerX + radius + 10, centerY - 5);
+    ctx.lineTo(centerX + radius + 10, centerY + 5);
+    ctx.closePath();
+    ctx.fillStyle = '#ffffff';
+    ctx.fill();
   }
 
-  function openWidget() {
-    const widget = document.getElementById('carkifelek-widget');
-    const overlay = document.getElementById('carkifelek-overlay');
-    const modal = document.querySelector('.carkifelek-modal');
-
-    widget?.classList.remove('carkifelek-hidden');
-    overlay?.classList.remove('carkifelek-hidden');
-    modal?.classList.remove('carkifelek-hidden');
+  function showPrize(prize) {
+    const prizeEl = document.getElementById('carkifelek-prize');
+    prizeEl.innerHTML = `🎉 ${prize.name} kazandınız!`;
   }
 
-  function closeWidget() {
-    const widget = document.getElementById('carkifelek-widget');
-    const overlay = document.getElementById('carkifelek-overlay');
-    const modal = document.querySelector('.carkifelek-modal');
+  function resetWidget() {
+    const prizeEl = document.getElementById('carkifelek-prize');
+    const inputDiv = document.getElementById('carkifelek-input');
+    const emailInput = document.getElementById('carkifelek-email');
 
-    widget?.classList.add('carkifelek-hidden');
-    overlay?.classList.add('carkifelek-hidden');
-    modal?.classList.add('carkifelek-hidden');
-  }
-
-  // ============================================
-  // VALIDATION
-  // ============================================
-
-  function isValidEmail(email) {
-    return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
-  }
-
-  function isValidPhone(phone) {
-    return /^[0-9+\-\s()]{10,}$/.test(phone);
-  }
-
-  function showInputError(inputId) {
-    const input = document.getElementById(inputId);
-    input?.classList.add('carkifelek-input-error');
-    setTimeout(() => input?.classList.remove('carkifelek-input-error'), 2000);
-  }
-
-  // ============================================
-  // RESULTS
-  // ============================================
-
-  function showResult(prize, couponCode) {
-    const form = document.getElementById('carkifelek-form');
-    const result = document.getElementById('carkifelek-result');
-    const message = document.getElementById('cark-result-message');
-    const couponContainer = document.getElementById('cark-coupon-container');
-    const couponCodeEl = document.getElementById('cark-coupon-code');
-    const ctaBtn = document.getElementById('cark-cta-btn');
-
-    form.style.display = 'none';
-    result.style.display = 'block';
-
-    message.textContent = `${prize.name} kazandınız!`;
-
-    if (couponCode) {
-      couponContainer.style.display = 'block';
-      couponCodeEl.textContent = couponCode;
-    }
-
-    ctaBtn.href = prize.url;
+    prizeEl.innerHTML = '';
+    inputDiv.style.display = 'none';
+    emailInput.value = '';
+    hasSpun = false;
   }
 
   // ============================================
   // UTILITY FUNCTIONS
   // ============================================
 
-  function getSessionId() {
-    let sessionId = sessionStorage.getItem('cark_session_id');
-    if (!sessionId) {
-      sessionId = 'sess_' + Date.now() + '_' + Math.random().toString(36).substr(2, 9);
-      sessionStorage.setItem('cark_session_id', sessionId);
-    }
-    return sessionId;
+  function isValidEmail(email) {
+    return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
   }
 
-  function checkPreviousSpin() {
-    const hasSpunBefore = localStorage.getItem(`cark_${CONFIG.shopToken}_spun`);
-    const savedEmail = localStorage.getItem(`cark_${CONFIG.shopToken}_email`);
-    const spinDate = localStorage.getItem(`cark_${CONFIG.shopToken}_date`);
+  // ============================================
+  // START WIDGET
+  // ============================================
 
-    if (hasSpunBefore === 'true') {
-      hasSpun = true;
-      sessionEmail = savedEmail;
-
-      if (spinDate) {
-        const daysSince = (Date.now() - new Date(spinDate).getTime()) / (1000 * 60 * 60 * 24);
-        if (daysSince >= 1) {
-          hasSpun = false;
-          localStorage.removeItem(`cark_${CONFIG.shopToken}_spun`);
-          localStorage.removeItem(`cark_${CONFIG.shopToken}_email`);
-          localStorage.removeItem(`cark_${CONFIG.shopToken}_date`);
-        }
-      }
+  // Check if shopToken is present before initializing
+  const widgetScript = document.getElementById('carkifelek-widget-script');
+  if (widgetScript && (widgetScript.getAttribute('data-shop-token') || widgetScript.getAttribute('data-wheel-id'))) {
+    // Defer initialization to ensure DOM is ready
+    if (document.readyState === 'loading') {
+      document.addEventListener('DOMContentLoaded', init);
+    } else {
+      init();
     }
-  }
-
-  // Initialize
-  if (document.readyState === 'loading') {
-    document.addEventListener('DOMContentLoaded', init);
-  } else {
-    init();
   }
 
 })();
