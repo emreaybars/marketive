@@ -1,7 +1,7 @@
 /**
- * Çarkıfelek Widget - Premium Redesign
- * Modern wheel with visible prize names, gradients, and smooth animations
- * Version 4.0.0
+ * Çarkıfelek Widget - WhatsApp Green Premium Edition
+ * Modern wheel with visible prize names, white modal, clean design
+ * Version 5.0.0
  */
 
 (function() {
@@ -133,15 +133,15 @@
             contactInfoType: widget.contact_info_type || 'email'
           },
           widget: {
-            title: widget.widget_title || '🎁 Şansını Deneme!',
+            title: widget.widget_title || 'Şansını Deneme! 🎁',
             description: widget.widget_description || 'Çarkı çevir, arma kazan!',
             buttonText: widget.widget_button_text || 'ÇARKI ÇEVİR',
             showOnLoad: widget.widget_show_on_load || false,
             popupDelay: widget.widget_popup_delay || 0,
-            backgroundColor: widget.widget_background_color || 'linear-gradient(135deg, #1a1a2e 0%, #16213e 100%)',
-            buttonColor: widget.widget_button_color || '#f59e0b',
-            titleColor: widget.widget_title_color || '#ffffff',
-            descriptionColor: widget.widget_description_color || '#a0aec0'
+            backgroundColor: widget.widget_background_color || '#25D366',
+            buttonColor: widget.widget_button_color || '#25D366',
+            titleColor: widget.widget_title_color || '#1a1a1a',
+            descriptionColor: widget.widget_description_color || '#666666'
           },
           prizes: widget.prizes || []
         };
@@ -218,7 +218,31 @@
   }
 
   // ============================================
-  // WHEEL RENDERING - PREMIUM DESIGN
+  // COLOR UTILITIES
+  // ============================================
+
+  function getContrastColor(hexColor) {
+    var hex = hexColor.replace('#', '');
+    var r = parseInt(hex.substr(0, 2), 16);
+    var g = parseInt(hex.substr(2, 2), 16);
+    var b = parseInt(hex.substr(4, 2), 16);
+    var brightness = (r * 299 + g * 587 + b * 114) / 1000;
+    return brightness > 128 ? '#1a1a1a' : '#ffffff';
+  }
+
+  function lightenColor(hexColor, amount) {
+    var hex = hexColor.replace('#', '');
+    var r = Math.min(255, parseInt(hex.substr(0, 2), 16) + amount);
+    var g = Math.min(255, parseInt(hex.substr(2, 2), 16) + amount);
+    var b = Math.min(255, parseInt(hex.substr(4, 2), 16) + amount);
+    return '#' +
+      (r < 16 ? '0' : '') + r.toString(16) +
+      (g < 16 ? '0' : '') + g.toString(16) +
+      (b < 16 ? '0' : '') + b.toString(16);
+  }
+
+  // ============================================
+  // WHEEL RENDERING - WHATSAPP GREEN PREMIUM
   // ============================================
 
   function renderWidget() {
@@ -253,47 +277,54 @@
 
     return '<div id="carkifelek-widget" style="' + getWidgetStyles() + '">' +
       '<button id="carkifelek-toggle" style="' + getToggleButtonStyles() + '">' +
-        '<svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">' +
+        '<svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">' +
           '<circle cx="12" cy="12" r="10"/>' +
           '<path d="M12 6v6l4 2"/>' +
         '</svg>' +
-        '<span style="margin-left: 10px; font-weight: 700; letter-spacing: 0.5px;">' + widgetData.widget.buttonText + '</span>' +
+        '<span style="margin-left: 10px; font-weight: 700;">' + widgetData.widget.buttonText + '</span>' +
       '</button>' +
     '</div>' +
       '<div id="carkifelek-modal" style="' + getModalStyles() + '">' +
         '<div style="' + getModalContentStyles() + '">' +
           '<button id="carkifelek-close" style="' + getCloseButtonStyles() + '">' +
-            '<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">' +
+            '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#1a1a1a" stroke-width="2.5">' +
               '<path d="M18 6L6 18M6 6l12 12"/>' +
             '</svg>' +
           '</button>' +
           '<h2 style="' + getTitleStyles() + '">' + widgetData.widget.title + '</h2>' +
           '<p style="' + getDescriptionStyles() + '">' + widgetData.widget.description + '</p>' +
-          '<div style="position: relative; width: 340px; height: 340px; margin: 30px auto;">' +
+          '<div style="position: relative; width: 300px; height: 300px; margin: 20px auto;">' +
             '<div id="carkifelek-wheel-glow" style="' + getWheelGlowStyles() + '"></div>' +
-            '<canvas id="carkifelek-wheel" width="340" height="340"></canvas>' +
+            '<canvas id="carkifelek-wheel" width="300" height="300"></canvas>' +
             '<div id="carkifelek-center" style="' + getCenterStyles() + '">🎁</div>' +
             '<div id="carkifelek-pointer" style="' + getPointerStyles() + '"></div>' +
           '</div>' +
           '<div id="carkifelek-result" style="' + getResultStyles() + '"></div>' +
           '<div id="carkifelek-form" style="' + getFormStyles() + '">' +
-            '<div style="display: flex; flex-direction: column; gap: 12px; margin-bottom: 12px;">' +
-              '<input type="text" id="carkifelek-fullname" placeholder="Ad Soyad" style="' + getInputStyles() + '" />' +
-              '<input type="' + inputType + '" id="' + inputId + '" placeholder="' + inputPlaceholder + '" style="' + getInputStyles() + '" />' +
+            '<input type="text" id="carkifelek-fullname" placeholder="Ad Soyad" style="' + getInputStyles() + '" />' +
+            '<input type="' + inputType + '" id="' + inputId + '" placeholder="' + inputPlaceholder + '" style="' + getInputStyles() + '" />' +
+            '<label style="' + getCheckboxStyles() + '" onclick="toggleConsent(\'kvvk\')">' +
+              '<div id="carkifelek-kvvk-check" style="' + getCheckboxBoxStyles() + '"></div>' +
+              '<span style="' + getCheckboxLabelStyles() + '"><strong>KVKK</strong> bilgilendirme metnini okudum, kabul ediyorum</span>' +
+            '</label>' +
+            '<label style="' + getCheckboxStyles() + '" onclick="toggleConsent(\'eticaret\')">' +
+              '<div id="carkifelek-eticaret-check" style="' + getCheckboxBoxStyles() + '"></div>' +
+              '<span style="' + getCheckboxLabelStyles() + '"><strong>Elektronik Ticari İleti</strong> aydınlatma metnini okudum, kabul ediyorum</span>' +
+            '</label>' +
+            '<div id="carkifelek-consent-error" style="' + getConsentErrorStyles() + '"></div>' +
             '<button id="carkifelek-spin" style="' + getSpinButtonStyles() + '">' +
-              '<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" style="margin-right: 8px;">' +
-                '<path d="M21 12a9 9 0 11-6.21-17.67"/>' +
-                '<path d="M21 3v9h-9"/>' +
-              '</svg>' +
-              'ÇEVİR!' +
+              '<span id="carkifelek-spin-text" style="font-weight: 700; letter-spacing: 0.5px;">ÇEVİR KAZAN</span>' +
+              '<svg id="carkifelek-spin-icon" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" style="margin-left: 6px;"><path d="M21 12a9 9 0 11-6.21-17.67"/><path d="M21 3v9h-9"/></svg>' +
             '</button>' +
-            '</div>' +
-            '<p style="font-size: 11px; color: #718096; text-align: center; font-weight: 500;">🔒 Verileriniz güvende</p>' +
+            '<p style="font-size: 12px; color: #9ca3af; text-align: center; margin-top: 12px; font-weight: 500;">' +
+              '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#25D366" stroke-width="2" style="vertical-align: middle; margin-right: 4px;"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0110 0v4"/></svg>' +
+              'Verileriniz güvende' +
+            '</p>' +
           '</div>' +
           '<div id="carkifelek-success" style="' + getSuccessStyles() + '">' +
-            '<div style="font-size: 64px; margin-bottom: 16px; animation: bounceIn 0.6s ease;">🎉</div>' +
-            '<h3 style="font-size: 24px; font-weight: 800; margin-bottom: 8px; background: linear-gradient(135deg, #f59e0b, #ef4444); -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text;">TEBRİKLER!</h3>' +
-            '<div id="carkifelek-prize-name" style="font-size: 18px; color: #f59e0b; font-weight: 700; margin-bottom: 16px;"></div>' +
+            '<div style="font-size: 56px; margin-bottom: 12px;">🎉</div>' +
+            '<h3 style="font-size: 22px; font-weight: 800; margin-bottom: 8px; background: linear-gradient(135deg, #25D366, #128C7E); -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text;">TEBRİKLER!</h3>' +
+            '<div id="carkifelek-prize-name" style="font-size: 18px; color: #25D366; font-weight: 700; margin-bottom: 12px;"></div>' +
             '<div id="carkifelek-coupon" style="' + getCouponStyles() + '"></div>' +
             '<button id="carkifelek-close-success" style="' + getCloseSuccessButtonStyles() + '">Kapat</button>' +
           '</div>' +
@@ -302,132 +333,157 @@
   }
 
   // ============================================
-  // STYLES - PREMIUM AESTHETICS
+  // STYLES - WHATSAPP GREEN PREMIUM
   // ============================================
 
   function getWidgetStyles() {
-    return 'position: fixed; bottom: 24px; right: 24px; z-index: 999999;' +
-           'opacity: 0; transform: translateY(30px); transition: all 0.5s cubic-bezier(0.23, 1, 0.32, 1);';
+    return 'position: fixed; bottom: 20px; right: 20px; z-index: 999999;' +
+           'opacity: 0; transform: translateY(20px); transition: all 0.4s cubic-bezier(0.23, 1, 0.32, 1);';
   }
 
   function getToggleButtonStyles() {
-    return 'background: linear-gradient(135deg, #f59e0b 0%, #dc2626 100%);' +
-           'color: white; border: none; padding: 16px 28px; border-radius: 60px;' +
+    return 'background: linear-gradient(135deg, #25D366 0%, #128C7E 100%);' +
+           'color: white; border: none; padding: 14px 24px; border-radius: 50px;' +
            'font-size: 14px; font-weight: 700; cursor: pointer;' +
-           'box-shadow: 0 12px 48px rgba(245, 158, 11, 0.5), 0 0 0 0 rgba(245, 158, 11, 0.4);' +
+           'box-shadow: 0 10px 40px rgba(37, 211, 102, 0.4);' +
            'display: flex; align-items: center; transition: all 0.3s cubic-bezier(0.23, 1, 0.32, 1);' +
            'font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;' +
-           'text-transform: uppercase; letter-spacing: 1px;';
+           'text-transform: uppercase; letter-spacing: 0.5px;';
   }
 
   function getModalStyles() {
     return 'position: fixed; top: 0; left: 0; right: 0; bottom: 0;' +
-           'background: rgba(0,0,0,0.85); backdrop-filter: blur(12px);' +
+           'background: rgba(0,0,0,0.4); backdrop-filter: blur(8px);' +
            'display: none; justify-content: center; align-items: center;' +
-           'z-index: 1000000; animation: fadeIn 0.4s ease;';
+           'z-index: 1000000; animation: fadeIn 0.3s ease;';
   }
 
   function getModalContentStyles() {
-    return 'background: ' + widgetData.widget.backgroundColor + ';' +
-           'border-radius: 32px; padding: 48px 40px; max-width: 460px; width: 90%;' +
-           'box-shadow: 0 32px 64px -16px rgba(0,0,0,0.7), 0 0 0 1px rgba(255,255,255,0.1);' +
+    return 'background: #ffffff;' +
+           'border-radius: 20px; padding: 32px 28px 28px 28px; max-width: 420px; width: 90%;' +
+           'box-shadow: 0 25px 50px -12px rgba(0,0,0,0.25), 0 0 0 1px rgba(0,0,0,0.05);' +
            'position: relative; overflow: hidden;' +
            'font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;';
   }
 
   function getCloseButtonStyles() {
-    return 'position: absolute; top: 20px; right: 20px;' +
-           'background: rgba(255,255,255,0.08); border: 1px solid rgba(255,255,255,0.1);' +
-           'color: #ffffff; width: 44px; height: 44px; border-radius: 14px;' +
-           'cursor: pointer; display: flex; align-items: center; justify-content: center;' +
-           'transition: all 0.2s ease; opacity: 0.7;';
+    return 'position: absolute; top: 16px; right: 16px;' +
+           'background: #1a1a1a; border: none; border-radius: 50%;' +
+           'color: #ffffff; width: 40px; height: 40px; cursor: pointer;' +
+           'display: flex; align-items: center; justify-content: center;' +
+           'transition: all 0.2s ease; opacity: 0.8;' +
+           'box-shadow: 0 4px 12px rgba(0,0,0,0.15);';
   }
 
   function getTitleStyles() {
-    return 'color: ' + widgetData.widget.titleColor + ';' +
-           'font-size: 32px; font-weight: 900; text-align: center;' +
-           'margin: 0 0 16px 0; letter-spacing: -0.5px; line-height: 1.2;';
+    return 'color: #1a1a1a;' +
+           'font-size: 28px; font-weight: 900; text-align: center;' +
+           'margin: 0 0 8px 0; letter-spacing: -0.5px; line-height: 1.2;' +
+           'background: linear-gradient(135deg, #25D366 0%, #128C7E 100%);' +
+           '-webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text;';
   }
 
   function getDescriptionStyles() {
-    return 'color: ' + widgetData.widget.descriptionColor + ';' +
-           'font-size: 16px; line-height: 1.6; text-align: center;' +
-           'margin: 0 0 20px 0; font-weight: 500;';
+    return 'color: #666666;' +
+           'font-size: 15px; line-height: 1.5; text-align: center;' +
+           'margin: 0 0 16px 0; font-weight: 500;';
   }
 
   function getWheelGlowStyles() {
     return 'position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%);' +
-           'width: 320px; height: 320px; border-radius: 50%;' +
-           'background: radial-gradient(circle, rgba(245, 158, 11, 0.15) 0%, transparent 70%);' +
+           'width: 280px; height: 280px; border-radius: 50%;' +
+           'background: radial-gradient(circle, rgba(37, 211, 102, 0.2) 0%, transparent 70%);' +
            'pointer-events: none;';
   }
 
   function getPointerStyles() {
-    return 'position: absolute; top: 50%; right: -16px;' +
+    return 'position: absolute; top: 50%; right: -12px;' +
            'transform: translateY(-50%); width: 0; height: 0;' +
-           'border-left: 28px solid #ffffff; border-top: 16px solid transparent;' +
-           'border-bottom: 16px solid transparent;' +
-           'filter: drop-shadow(0 4px 12px rgba(0,0,0,0.4));' +
+           'border-left: 24px solid #1a1a1a; border-top: 14px solid transparent;' +
+           'border-bottom: 14px solid transparent;' +
+           'filter: drop-shadow(0 2px 8px rgba(0,0,0,0.3));' +
            'z-index: 10;';
   }
 
   function getCenterStyles() {
     return 'position: absolute; top: 50%; left: 50%;' +
            'transform: translate(-50%, -50%);' +
-           'width: 80px; height: 80px; border-radius: 50%;' +
-           'background: linear-gradient(135deg, #ffffff 0%, #f7fafc 100%);' +
+           'width: 72px; height: 72px; border-radius: 50%;' +
+           'background: linear-gradient(135deg, #ffffff 0%, #f0f0f0 100%);' +
            'display: flex; align-items: center; justify-content: center;' +
-           'font-size: 36px; box-shadow: 0 8px 32px rgba(0,0,0,0.3), inset 0 -2px 8px rgba(0,0,0,0.1);' +
+           'font-size: 32px; box-shadow: 0 4px 20px rgba(0,0,0,0.1);' +
            'z-index: 5;';
   }
 
   function getResultStyles() {
-    return 'min-height: 28px; margin: 20px 0; color: #f59e0b; font-weight: 700;' +
-           'font-size: 16px; text-align: center;';
+    return 'min-height: 24px; margin: 16px 0; color: #25D366; font-weight: 700;' +
+           'font-size: 14px; text-align: center;';
   }
 
   function getFormStyles() {
-    return 'margin-top: 24px;';
+    return 'margin-top: 16px; display: flex; flex-direction: column; gap: 12px;';
   }
 
   function getInputStyles() {
-    return 'width: 100%; padding: 16px 20px; border: 2px solid rgba(255,255,255,0.1);' +
-           'border-radius: 16px; font-size: 15px; color: #ffffff;' +
-           'background: rgba(255,255,255,0.05); outline: none;' +
-           'transition: all 0.2s ease; font-family: inherit; font-weight: 500;';
+    return 'width: 100%; padding: 14px 16px; border: 2px solid #e5e7eb;' +
+           'border-radius: 12px; font-size: 15px; color: #1a1a1a;' +
+           'background: #f9fafb; outline: none; transition: all 0.2s ease;' +
+           'font-family: inherit; font-weight: 500;';
+  }
+
+  function getCheckboxStyles() {
+    return 'display: flex; align-items: flex-start; gap: 10px; padding: 10px 12px;' +
+           'border: 2px solid #e5e7eb; border-radius: 10px; cursor: pointer;' +
+           'background: #f9fafb; transition: all 0.2s ease;';
+  }
+
+  function getCheckboxBoxStyles() {
+    return 'flex-shrink-0; width: 18px; height: 18px; min-width: 18px; border: 2px solid #d1d5db;' +
+           'border-radius: 4px; display: flex; align-items: center; justify-content: center;' +
+           'transition: all 0.15s ease; background: #ffffff;';
+  }
+
+  function getCheckboxLabelStyles() {
+    return 'font-size: 12px; line-height: 1.4; color: #4b5563; flex: 1;';
+  }
+
+  function getConsentErrorStyles() {
+    return 'font-size: 11px; color: #ef4444; font-weight: 600; margin-top: -8px; margin-bottom: 4px;' +
+           'display: none; padding-left: 28px;';
   }
 
   function getSpinButtonStyles() {
-    return 'background: linear-gradient(135deg, #f59e0b 0%, #dc2626 100%);' +
-           'color: white; border: none; padding: 18px 32px; border-radius: 16px;' +
-           'font-size: 16px; font-weight: 800; cursor: pointer; display: flex;' +
-           'align-items: center; justify-content: center;' +
-           'box-shadow: 0 8px 24px rgba(245, 158, 11, 0.4);' +
-           'transition: all 0.3s cubic-bezier(0.23, 1, 0.32, 1); font-family: inherit;' +
-           'text-transform: uppercase; letter-spacing: 1px;';
+    var bgColor = widgetData.widget.buttonColor || '#25D366';
+    return 'width: 100%; padding: 14px 24px; border-radius: 12px;' +
+           'background: ' + bgColor + '; color: #ffffff;' +
+           'font-size: 16px; font-weight: 700; cursor: pointer; border: none;' +
+           'display: flex; align-items: center; justify-content: center;' +
+           'box-shadow: 0 6px 20px rgba(37, 211, 102, 0.35);' +
+           'transition: all 0.3s cubic-bezier(0.23, 1, 0.32, 1);' +
+           'font-family: inherit; text-transform: uppercase; letter-spacing: 0.5px;';
   }
 
   function getSuccessStyles() {
-    return 'display: none; text-align: center; padding: 24px;';
+    return 'display: none; text-align: center; padding: 20px;';
   }
 
   function getCouponStyles() {
-    return 'background: linear-gradient(135deg, rgba(245, 158, 11, 0.15) 0%, rgba(220, 38, 38, 0.15) 100%);' +
-           'padding: 16px 24px; border-radius: 16px; margin: 20px 0;' +
+    return 'background: linear-gradient(135deg, rgba(37, 211, 102, 0.08) 0%, rgba(37, 211, 102, 0.12) 100%);' +
+           'padding: 12px 20px; border-radius: 12px; margin: 16px 0;' +
            'font-family: "SF Mono", "Monaco", "Inconsolata", monospace;' +
-           'font-size: 15px; letter-spacing: 1px; color: #fbbf24;' +
-           'border: 1px solid rgba(245, 158, 11, 0.3); font-weight: 600;';
+           'font-size: 14px; letter-spacing: 0.5px; color: #25D366;' +
+           'border: 1px solid rgba(37, 211, 102, 0.25); font-weight: 600;';
   }
 
   function getCloseSuccessButtonStyles() {
-    return 'background: rgba(255,255,255,0.1); border: 1px solid rgba(255,255,255,0.2);' +
-           'color: #ffffff; padding: 14px 36px; border-radius: 14px;' +
-           'font-size: 15px; font-weight: 700; cursor: pointer;' +
-           'transition: all 0.2s ease; margin-top: 24px; text-transform: uppercase; letter-spacing: 1px;';
+    return 'background: #f9fafb; border: 1px solid #e5e7eb; color: #1a1a1a;' +
+           'padding: 12px 28px; border-radius: 10px; font-size: 14px; font-weight: 700;' +
+           'cursor: pointer; transition: all 0.2s ease; margin-top: 16px;' +
+           'text-transform: uppercase; letter-spacing: 0.5px;';
   }
 
   // ============================================
-  // WHEEL DRAWING WITH PRIZE NAMES
+  // WHEEL DRAWING WITH PRIZE NAMES (RADIAL ALIGNMENT)
   // ============================================
 
   function drawWheel() {
@@ -439,7 +495,7 @@
 
     var centerX = canvas.width / 2;
     var centerY = canvas.height / 2;
-    var radius = canvas.width / 2 - 20;
+    var radius = canvas.width / 2 - 24;
     var numPrizes = widgetData.prizes.length;
     var arcSize = (2 * Math.PI) / numPrizes;
 
@@ -452,11 +508,25 @@
     wheelContext.rotate(currentRotation * Math.PI / 180);
     wheelContext.translate(-centerX, -centerY);
 
-    // Draw segments
+    // Draw outer dots (decorative)
+    var dotCount = 48;
+    var dotRadius = radius + 14;
+    for (var i = 0; i < dotCount; i++) {
+      var angle = (i / dotCount) * 2 * Math.PI;
+      var x = centerX + Math.cos(angle) * dotRadius;
+      var y = centerY + Math.sin(angle) * dotRadius;
+
+      wheelContext.beginPath();
+      wheelContext.arc(x, y, 2.5, 0, 2 * Math.PI);
+      wheelContext.fillStyle = '#ffffff';
+      wheelContext.fill();
+    }
+
+    // Draw slices
     for (var i = 0; i < numPrizes; i++) {
       var prize = widgetData.prizes[i];
-      var startAngle = i * arcSize;
-      var endAngle = startAngle + arcSize - 0.06;
+      var startAngle = i * arcSize - Math.PI / 2;
+      var endAngle = startAngle + arcSize - 0.05;
 
       // Draw segment path
       wheelContext.beginPath();
@@ -464,110 +534,80 @@
       wheelContext.arc(centerX, centerY, radius, startAngle, endAngle);
       wheelContext.closePath();
 
-      // Create gradient for segment
+      // Gradient fill
       var gradient = wheelContext.createRadialGradient(centerX, centerY, 0, centerX, centerY, radius);
-      gradient.addColorStop(0, lightenColor(prize.color, 25));
-      gradient.addColorStop(0.7, prize.color);
-      gradient.addColorStop(1, darkenColor(prize.color, 15));
+      gradient.addColorStop(0, lightenColor(prize.color, 35));
+      gradient.addColorStop(0.6, prize.color);
+      gradient.addColorStop(1, prize.color);
       wheelContext.fillStyle = gradient;
       wheelContext.fill();
 
       // Segment border
-      wheelContext.strokeStyle = 'rgba(255,255,255,0.3)';
+      wheelContext.strokeStyle = 'rgba(255,255,255,0.4)';
       wheelContext.lineWidth = 2;
       wheelContext.stroke();
 
-      // Draw prize name
-      drawPrizeName(prize.name, startAngle, endAngle, centerX, centerY, radius, prize.color);
+      // Draw prize name (radially aligned)
+      drawPrizeName(prize.name, startAngle, endAngle, centerX, centerY, radius * 0.70, prize.color);
     }
 
-    // Outer ring with gradient
+    // Inner dashed circle
     wheelContext.beginPath();
-    wheelContext.arc(centerX, centerY, radius + 8, 0, 2 * Math.PI);
-    var ringGradient = wheelContext.createLinearGradient(centerX - radius, centerY - radius, centerX + radius, centerY + radius);
-    ringGradient.addColorStop(0, '#f59e0b');
-    ringGradient.addColorStop(0.5, '#ef4444');
-    ringGradient.addColorStop(1, '#f59e0b');
-    wheelContext.strokeStyle = ringGradient;
-    wheelContext.lineWidth = 12;
-    wheelContext.stroke();
-
-    // Inner decorative ring
-    wheelContext.beginPath();
-    wheelContext.arc(centerX, centerY, 60, 0, 2 * Math.PI);
-    wheelContext.strokeStyle = 'rgba(255,255,255,0.2)';
+    wheelContext.arc(centerX, centerY, radius * 0.38, 0, 2 * Math.PI);
+    wheelContext.strokeStyle = '#1a1a1a';
     wheelContext.lineWidth = 2;
+    wheelContext.setLineDash([6, 6]);
     wheelContext.stroke();
+    wheelContext.setLineDash([]);
+
+    // Center white circle
+    wheelContext.beginPath();
+    wheelContext.arc(centerX, centerY, 38, 0, 2 * Math.PI);
+    var centerGradient = wheelContext.createRadialGradient(centerX, centerY, 0, centerX, centerY, 38);
+    centerGradient.addColorStop(0, '#ffffff');
+    centerGradient.addColorStop(1, '#f5f5f5');
+    wheelContext.fillStyle = centerGradient;
+    wheelContext.fill();
+
+    // Center icon
+    wheelContext.fillStyle = '#25D366';
+    wheelContext.font = 'bold 28px -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif';
+    wheelContext.textAlign = 'center';
+    wheelContext.textBaseline = 'middle';
+    wheelContext.fillText('🎁', centerX, centerY);
 
     wheelContext.restore();
   }
 
   function drawPrizeName(name, startAngle, endAngle, centerX, centerY, radius, color) {
     var midAngle = startAngle + (endAngle - startAngle) / 2;
-    var textRadius = radius * 0.68;
-
-    var textX = centerX + Math.cos(midAngle) * textRadius;
-    var textY = centerY + Math.sin(midAngle) * textRadius;
+    var textX = centerX + Math.cos(midAngle) * radius;
+    var textY = centerY + Math.sin(midAngle) * radius;
 
     wheelContext.save();
     wheelContext.translate(textX, textY);
     wheelContext.rotate(midAngle + Math.PI / 2);
 
     // Text shadow for readability
-    wheelContext.shadowColor = 'rgba(0,0,0,0.8)';
-    wheelContext.shadowBlur = 8;
+    wheelContext.shadowColor = 'rgba(0,0,0,0.5)';
+    wheelContext.shadowBlur = 4;
     wheelContext.shadowOffsetX = 0;
-    wheelContext.shadowOffsetY = 2;
+    wheelContext.shadowOffsetY = 1;
 
     // Font settings
-    wheelContext.font = 'bold 13px -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif';
+    wheelContext.font = '700 11px -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif';
     wheelContext.textAlign = 'center';
     wheelContext.textBaseline = 'middle';
 
     // Text color based on segment brightness
-    var brightness = getBrightness(color);
-    wheelContext.fillStyle = brightness > 128 ? '#1a1a2e' : '#ffffff';
+    wheelContext.fillStyle = getContrastColor(color);
 
     // Truncate long names
-    var maxLength = 18;
-    var displayName = name.length > maxLength ? name.substring(0, maxLength - 2) + '...' : name;
+    var maxLength = 12;
+    var displayName = name.length > maxLength ? name.substring(0, maxLength - 2) + '..' : name;
 
     wheelContext.fillText(displayName, 0, 0);
     wheelContext.restore();
-  }
-
-  function lightenColor(color, percent) {
-    var hex = color.replace('#', '');
-    var r = parseInt(hex.substr(0, 2), 16);
-    var g = parseInt(hex.substr(2, 2), 16);
-    var b = parseInt(hex.substr(4, 2), 16);
-
-    r = Math.min(255, Math.floor(r + (255 - r) * percent / 100));
-    g = Math.min(255, Math.floor(g + (255 - g) * percent / 100));
-    b = Math.min(255, Math.floor(b + (255 - b) * percent / 100));
-
-    return '#' + ((1 << 24) + (r << 16) + (g << 8) + b).toString(16).slice(1);
-  }
-
-  function darkenColor(color, percent) {
-    var hex = color.replace('#', '');
-    var r = parseInt(hex.substr(0, 2), 16);
-    var g = parseInt(hex.substr(2, 2), 16);
-    var b = parseInt(hex.substr(4, 2), 16);
-
-    r = Math.max(0, Math.floor(r * (1 - percent / 100)));
-    g = Math.max(0, Math.floor(g * (1 - percent / 100)));
-    b = Math.max(0, Math.floor(b * (1 - percent / 100)));
-
-    return '#' + ((1 << 24) + (r << 16) + (g << 8) + b).toString(16).slice(1);
-  }
-
-  function getBrightness(color) {
-    var hex = color.replace('#', '');
-    var r = parseInt(hex.substr(0, 2), 16);
-    var g = parseInt(hex.substr(2, 2), 16);
-    var b = parseInt(hex.substr(4, 2), 16);
-    return (r * 299 + g * 587 + b * 114) / 1000;
   }
 
   // ============================================
@@ -630,9 +670,15 @@
 
   function showResult(message, color) {
     var resultEl = document.getElementById('carkifelek-result');
+    var consentErrorEl = document.getElementById('carkifelek-consent-error');
+
     if (resultEl) {
       resultEl.innerHTML = message;
-      resultEl.style.color = color || '#f59e0b';
+      resultEl.style.color = color || '#25D366';
+    }
+
+    if (consentErrorEl) {
+      consentErrorEl.style.display = 'none';
     }
   }
 
@@ -673,7 +719,16 @@
     var contactInput = document.getElementById(inputId);
     var spinBtn = document.getElementById('carkifelek-spin');
 
-    if (formEl) formEl.style.display = 'block';
+    // Reset checkboxes
+    window.widgetConsents = [];
+
+    updateCheckbox('kvvk', false);
+    updateCheckbox('eticaret', false);
+
+    var consentErrorEl = document.getElementById('carkifelek-consent-error');
+    if (consentErrorEl) consentErrorEl.style.display = 'none';
+
+    if (formEl) formEl.style.display = 'flex';
     if (resultEl) {
       resultEl.innerHTML = '';
       resultEl.style.display = 'block';
@@ -689,11 +744,65 @@
     }
     if (spinBtn) {
       spinBtn.disabled = false;
-      spinBtn.innerHTML = '<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" style="margin-right: 8px;"><path d="M21 12a9 9 0 11-6.21-17.67"/><path d="M21 3v9h-9"/></svg>ÇEVİR!';
+      spinBtn.innerHTML = '<span id="carkifelek-spin-text" style="font-weight: 700; letter-spacing: 0.5px;">ÇEVİR KAZAN</span>' +
+        '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" style="margin-left: 6px;"><path d="M21 12a9 9 0 11-6.21-17.67"/><path d="M21 3v9h-9"/></svg>';
     }
+
+    // Reset input borders
+    resetInputBorder('carkifelek-fullname');
+    resetInputBorder(inputId);
 
     currentRotation = 0;
     drawWheel();
+  }
+
+  function resetInputBorder(inputId) {
+    var input = document.getElementById(inputId);
+    if (input) {
+      input.style.borderColor = '#e5e7eb';
+      input.style.background = '#f9fafb';
+      input.style.boxShadow = 'none';
+    }
+  }
+
+  function updateCheckbox(type, checked) {
+    var checkEl = document.getElementById('carkifelek-' + type + '-check');
+    if (!checkEl) return;
+
+    if (checked) {
+      checkEl.innerHTML = '<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="3.5"><path d="M20 6L9 17l-5-5"/></svg>';
+      checkEl.style.background = '#25D366';
+      checkEl.style.borderColor = '#25D366';
+    } else {
+      checkEl.innerHTML = '';
+      checkEl.style.background = '#ffffff';
+      checkEl.style.borderColor = '#d1d5db';
+    }
+  }
+
+  // Global consent storage
+  window.widgetConsents = [];
+
+  function toggleConsent(type) {
+    if (!window.widgetConsents) window.widgetConsents = [];
+
+    var index = window.widgetConsents.indexOf(type);
+    if (index > -1) {
+      window.widgetConsents.splice(index, 1);
+      updateCheckbox(type, false);
+    } else {
+      window.widgetConsents.push(type);
+      updateCheckbox(type, true);
+    }
+
+    // Clear error if both checked
+    var kvvkChecked = window.widgetConsents.includes('kvvk');
+    var ticaretChecked = window.widgetConsents.includes('eticaret');
+
+    if (kvvkChecked && ticaretChecked) {
+      var errorEl = document.getElementById('carkifelek-consent-error');
+      if (errorEl) errorEl.style.display = 'none';
+    }
   }
 
   // ============================================
@@ -731,36 +840,50 @@
 
       if (!fullName) {
         showResult('Lütfen adınızı ve soyadınızı girin 😊', '#ef4444');
-        fullNameInput.focus();
+        highlightError('carkifelek-fullname');
         return;
       }
 
       if (fullName.length < 3) {
         showResult('Lütfen geçerli bir ad soyad girin (en az 3 karakter) 📝', '#ef4444');
-        fullNameInput.focus();
+        highlightError('carkifelek-fullname');
         return;
       }
 
       if (!contact) {
         var emptyMsg = isPhone ? 'Lütfen telefon numaranızı girin 😊' : 'Lütfen e-posta adresinizi girin 😊';
         showResult(emptyMsg, '#ef4444');
-        contactInput.focus();
+        highlightError(inputId);
         return;
       }
 
       if (isPhone) {
         if (!isValidPhone(contact)) {
           showResult('Geçerli bir telefon numarası girin 📱 (5XX XXX XX XX)', '#ef4444');
-          contactInput.focus();
+          highlightError(inputId);
           return;
         }
         contact = formatPhone(contact);
       } else {
         if (!isValidEmail(contact)) {
           showResult('Geçerli bir e-posta adresi girin 📧', '#ef4444');
-          contactInput.focus();
+          highlightError(inputId);
           return;
         }
+      }
+
+      // Check consents
+      var kvvkChecked = window.widgetConsents && window.widgetConsents.includes('kvvk');
+      var ticaretChecked = window.widgetConsents && window.widgetConsents.includes('eticaret');
+
+      if (!kvkChecked || !ticaretChecked) {
+        showResult('Lütfen zorunlu onayları kabul edin ✓', '#ef4444');
+        var consentErrorEl = document.getElementById('carkifelek-consent-error');
+        if (consentErrorEl) {
+          consentErrorEl.textContent = 'Elektronik ileti onayı gereklidir';
+          consentErrorEl.style.display = 'block';
+        }
+        return;
       }
 
       checkContactUsed(contact, function(err, used) {
@@ -775,11 +898,15 @@
           return;
         }
 
+        // All valid, spin the wheel
         selectedPrize = selectPrize();
         fullNameInput.disabled = true;
         contactInput.disabled = true;
         spinBtn.disabled = true;
-        spinBtn.innerHTML = '<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" style="margin-right: 8px; animation: spin 1s linear infinite;"><circle cx="12" cy="12" r="10"/><path d="M12 6v6l4 2"/></svg>ÇEVİRİLİYOR...';
+
+        // Show loading state
+        spinBtn.innerHTML = '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" style="animation: spin 1s linear infinite; margin-right: 8px;"><circle cx="12" cy="12" r="10"/><path d="M12 6v6l4 2"/></svg><span style="font-weight: 700;">ÇEVİRİLİYOR...</span>';
+
         spinWheel(selectedPrize, fullName, contact);
       });
     };
@@ -801,6 +928,34 @@
     };
     fullNameInput.addEventListener('keypress', handleEnterKey);
     contactInput.addEventListener('keypress', handleEnterKey);
+
+    // Input focus handlers
+    fullNameInput.addEventListener('focus', function() {
+      highlightInput('carkifelek-fullname', false);
+    });
+    contactInput.addEventListener('focus', function() {
+      highlightInput(inputId, false);
+    });
+  }
+
+  function highlightError(inputId) {
+    var input = document.getElementById(inputId);
+    if (input) {
+      input.style.borderColor = '#ef4444';
+      input.style.background = '#fef2f2';
+      input.style.boxShadow = '0 0 0 3px rgba(239, 68, 68, 0.1)';
+    }
+  }
+
+  function highlightInput(inputId, isError) {
+    var input = document.getElementById(inputId);
+    if (!input) return;
+
+    if (!isError) {
+      input.style.borderColor = '#e5e7eb';
+      input.style.background = '#f9fafb';
+      input.style.boxShadow = 'none';
+    }
   }
 
   // ============================================
@@ -873,30 +1028,33 @@
       from { opacity: 0; }
       to { opacity: 1; }
     }
-    @keyframes bounceIn {
-      0% { transform: scale(0.3); opacity: 0; }
-      50% { transform: scale(1.05); }
-      70% { transform: scale(0.9); }
-      100% { transform: scale(1); opacity: 1; }
-    }
     @keyframes spin {
       from { transform: rotate(0deg); }
       to { transform: rotate(360deg); }
     }
     #carkifelek-widget button:hover {
-      transform: translateY(-3px) scale(1.05) !important;
-      box-shadow: 0 16px 56px rgba(245, 158, 11, 0.6) !important;
+      transform: translateY(-2px) scale(1.02) !important;
+      box-shadow: 0 14px 48px rgba(37, 211, 102, 0.5) !important;
     }
     #carkifelek-modal button:hover {
       transform: scale(1.05);
-      background: rgba(255,255,255,0.15) !important;
+    }
+    #carkifelek-close:hover {
+      opacity: 1 !important;
+      transform: scale(1.1) !important;
     }
     #carkifelek-fullname:focus,
     #carkifelek-email:focus,
     #carkifelek-phone:focus {
-      border-color: #f59e0b !important;
-      box-shadow: 0 0 0 4px rgba(245, 158, 11, 0.15), 0 0 0 1px #f59e0b !important;
-      background: rgba(255,255,255,0.08) !important;
+      border-color: #25D366 !important;
+      box-shadow: 0 0 0 3px rgba(37, 211, 102, 0.1), 0 0 0 1px #25D366 !important;
+      background: #ffffff !important;
+    }
+    #carkifelek-spin:disabled {
+      opacity: 0.7;
+      cursor: not-allowed !important;
+      transform: none !important;
+      box-shadow: none !important;
     }
   `;
   document.head.appendChild(style);
