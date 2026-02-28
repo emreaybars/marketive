@@ -121,14 +121,9 @@ export function CarkProvider({ children }: { children: ReactNode }) {
         return
       }
 
+      // Use RPC function to get user's shops (works with TEXT type)
       const { data, error } = await supabase
-        .from('shops')
-        .select(`
-          *,
-          widget_settings (*)
-        `)
-        .eq('customer_id', clerkUserId) // SECURITY: Filter by current Clerk user
-        .order('created_at', { ascending: false })
+        .rpc('get_user_shops', { p_customer_id: clerkUserId })
 
       if (error) throw error
 
@@ -144,7 +139,8 @@ export function CarkProvider({ children }: { children: ReactNode }) {
 </script>`
           return {
             ...wheel,
-            embed_code: embedCode
+            embed_code: embedCode,
+            widget_settings: wheel.widget_settings
           }
         })
       )
@@ -262,6 +258,18 @@ export function CarkProvider({ children }: { children: ReactNode }) {
         throw new Error('Oturum açmanız gerekiyor')
       }
 
+      // First, fetch the shop to check ownership
+      const { data: shop } = await supabase
+        .from('shops')
+        .select('id, customer_id')
+        .eq('id', id)
+        .single()
+
+      if (!shop || shop.customer_id !== clerkUserId) {
+        throw new Error('Bu çarkı güncelleme yetkiniz yok')
+      }
+
+      // Update the shop
       const { error } = await supabase
         .from('shops')
         .update({
@@ -272,7 +280,6 @@ export function CarkProvider({ children }: { children: ReactNode }) {
           active: data.active
         })
         .eq('id', id)
-        .eq('customer_id', clerkUserId) // SECURITY: Only user's own shops
 
       if (error) throw error
       await refreshWheels()
@@ -291,11 +298,22 @@ export function CarkProvider({ children }: { children: ReactNode }) {
         throw new Error('Oturum açmanız gerekiyor')
       }
 
+      // First, fetch the shop to check ownership
+      const { data: shop } = await supabase
+        .from('shops')
+        .select('id, customer_id')
+        .eq('id', id)
+        .single()
+
+      if (!shop || shop.customer_id !== clerkUserId) {
+        throw new Error('Bu çarkı silme yetkiniz yok')
+      }
+
+      // Delete the shop
       const { error } = await supabase
         .from('shops')
         .delete()
         .eq('id', id)
-        .eq('customer_id', clerkUserId) // SECURITY: Only user's own shops
 
       if (error) throw error
       await refreshWheels()
@@ -317,34 +335,9 @@ export function CarkProvider({ children }: { children: ReactNode }) {
         return
       }
 
-      // Get user's shop IDs first
-      const { data: userShops } = await supabase
-        .from('shops')
-        .select('id')
-        .eq('customer_id', clerkUserId)
-
-      const shopIds = userShops?.map((s: any) => s.id) || []
-
-      if (shopIds.length === 0) {
-        setWheelSpins([])
-        return
-      }
-
-      // Query from won_prizes which has the correct prize_id relation
+      // Use RPC function to get user's wheel spins
       const { data, error } = await supabase
-        .from('won_prizes')
-        .select(`
-          id,
-          shop_id,
-          full_name,
-          email,
-          phone,
-          coupon_code,
-          won_at,
-          prize:prizes(name)
-        `)
-        .in('shop_id', shopIds) // SECURITY: Only user's shops
-        .order('won_at', { ascending: false })
+        .rpc('get_user_wheel_spins', { p_customer_id: clerkUserId })
 
       if (error) throw error
 
@@ -355,7 +348,7 @@ export function CarkProvider({ children }: { children: ReactNode }) {
         full_name: item.full_name,
         email: item.email,
         phone: item.phone,
-        prize_name: item.prize?.name || 'Bilinmeyen Ödül',
+        prize_name: item.prize_name || 'Bilinmeyen Ödül',
         coupon_code: item.coupon_code,
         created_at: item.won_at
       }))
