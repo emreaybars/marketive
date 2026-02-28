@@ -33,7 +33,6 @@ DECLARE
   v_payload JSONB;
 BEGIN
   -- Base64URL'dan decode et (padding ekle)
-  -- Base64URL: - yerine +, _ yerine /, padding yok
   v_decoded := convert_from(
     decode(
       replace(replace(p_token, '-', '+'), '_', '/') || repeat('=', (4 - length(p_token) % 4) % 4),
@@ -242,21 +241,10 @@ END;
 $$;
 
 -- ============================================
--- RLS POLICY AYARLARI (güvenlik için)
+-- RLS DISABLE (Shop creation için)
 -- ============================================
 
--- Drop existing policies if they exist
-DROP POLICY IF EXISTS "allow_public_widget_read" ON shops;
-DROP POLICY IF EXISTS "allow_public_widget_settings_read" ON widget_settings;
-DROP POLICY IF EXISTS "allow_public_prizes_read" ON prizes;
-DROP POLICY IF EXISTS "users_can_insert_shops" ON shops;
-DROP POLICY IF EXISTS "users_can_insert_widget_settings" ON widget_settings;
-DROP POLICY IF EXISTS "users_can_insert_prizes" ON prizes;
-DROP POLICY IF EXISTS "users_can_insert_won_prizes" ON won_prizes;
-DROP POLICY IF EXISTS "users_can_insert_wheel_spins" ON wheel_spins;
-DROP POLICY IF EXISTS "users_can_insert_views" ON widget_views;
-
--- DISABLE RLS for development (enable later for production)
+-- Tüm RLS'yi devre dışı bırak
 ALTER TABLE shops DISABLE ROW LEVEL SECURITY;
 ALTER TABLE widget_settings DISABLE ROW LEVEL SECURITY;
 ALTER TABLE prizes DISABLE ROW LEVEL SECURITY;
@@ -264,66 +252,11 @@ ALTER TABLE won_prizes DISABLE ROW LEVEL SECURITY;
 ALTER TABLE wheel_spins DISABLE ROW LEVEL SECURITY;
 ALTER TABLE widget_views DISABLE ROW LEVEL SECURITY;
 
--- Herkes widget verilerini görebilir (RPC functions public)
-CREATE POLICY "allow_public_widget_read" ON shops
-  FOR SELECT
-  TO anon
-  USING (true);
-
-CREATE POLICY "allow_public_widget_settings_read" ON widget_settings
-  FOR SELECT
-  TO anon
-  USING (true);
-
-CREATE POLICY "allow_public_prizes_read" ON prizes
-  FOR SELECT
-  TO anon
-  USING (true);
-
--- Herkes insert yapabilsin (RLS enable edildiğinde gerekli)
-CREATE POLICY "allow_public_insert_shops" ON shops
-  FOR INSERT
-  TO anon
-  WITH CHECK (true);
-
-CREATE POLICY "allow_public_insert_widget_settings" ON widget_settings
-  FOR INSERT
-  TO anon
-  WITH CHECK (true);
-
-CREATE POLICY "allow_public_insert_prizes" ON prizes
-  FOR INSERT
-  TO anon
-  WITH CHECK (true);
-
--- Sadece kendi shop'una veri yazabilsin
-CREATE POLICY "users_can_insert_won_prizes" ON won_prizes
-  FOR INSERT
-  TO anon
-  WITH CHECK (true);
-
-CREATE POLICY "users_can_insert_wheel_spins" ON wheel_spins
-  FOR INSERT
-  TO anon
-  WITH CHECK (true);
-
-CREATE POLICY "users_can_insert_views" ON widget_views
-  FOR INSERT
-  TO anon
-  WITH CHECK (true);
-
 -- ============================================
--- VARSAYILAN INDEXLER
+-- INDEXLER
 -- ============================================
 
 CREATE INDEX IF NOT EXISTS idx_shops_shop_id ON shops(shop_id) WHERE active = true;
 CREATE INDEX IF NOT EXISTS idx_prizes_shop_id ON prizes(shop_id) WHERE active = true;
 CREATE INDEX IF NOT EXISTS idx_won_prizes_shop_email ON won_prizes(shop_id, email);
 CREATE INDEX IF NOT EXISTS idx_wheel_spins_shop_spin_date ON wheel_spins(shop_id, spin_date);
-
--- ============================================
--- TEST
--- ============================================
-
--- Test widget data
--- SELECT * FROM get_widget_data('TEST_TOKEN');
