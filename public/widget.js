@@ -49,9 +49,9 @@
   }
 
   function isValidPhone(phone) {
-    // Turkish phone format: 5XXXXXXXXX or +905XXXXXXXXX or 05XXXXXXXXX
+    // Turkish phone format: 5XXXXXXXXX (10 digits) or +905XXXXXXXXX or 05XXXXXXXXX
     var cleaned = phone.replace(/\s/g, '').replace(/\(/g, '').replace(/\)/g, '').replace(/-/g, '');
-    return /^(\+?90|0)?5\d{8}$/.test(cleaned);
+    return /^(\+?90|0)?5\d{9}$/.test(cleaned);
   }
 
   function formatPhone(phone) {
