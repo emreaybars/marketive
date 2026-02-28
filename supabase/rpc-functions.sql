@@ -140,12 +140,13 @@ BEGIN
 END;
 $$;
 
--- 3. Çark dönüşü kaydet (email veya phone ile)
+-- 3. Çark dönüşü kaydet (email veya phone ile + full_name)
 CREATE OR REPLACE FUNCTION log_wheel_spin(
   p_shop_uuid UUID,
   p_prize_id UUID,
   p_email TEXT DEFAULT NULL,
   p_phone TEXT DEFAULT NULL,
+  p_full_name TEXT DEFAULT NULL,
   p_ip_address TEXT DEFAULT NULL,
   p_user_agent TEXT DEFAULT NULL
 )
@@ -171,6 +172,7 @@ BEGIN
     shop_id,
     email,
     phone,
+    full_name,
     result,
     prize_type,
     coupon_code,
@@ -182,6 +184,7 @@ BEGIN
     p_shop_uuid,
     CASE WHEN p_email IS NOT NULL THEN LOWER(p_email) ELSE NULL END,
     p_phone,
+    p_full_name,
     'won',
     'prize',
     v_coupon_code,
@@ -198,6 +201,7 @@ BEGIN
     prize_id,
     email,
     phone,
+    full_name,
     coupon_code,
     won_at
   ) VALUES (
@@ -206,6 +210,7 @@ BEGIN
     p_prize_id,
     CASE WHEN p_email IS NOT NULL THEN LOWER(p_email) ELSE NULL END,
     p_phone,
+    p_full_name,
     v_coupon_code,
     NOW()
   );
@@ -278,4 +283,5 @@ CREATE INDEX IF NOT EXISTS idx_shops_shop_id ON shops(shop_id) WHERE active = tr
 CREATE INDEX IF NOT EXISTS idx_prizes_shop_id ON prizes(shop_id) WHERE active = true;
 CREATE INDEX IF NOT EXISTS idx_won_prizes_shop_email ON won_prizes(shop_id, email);
 CREATE INDEX IF NOT EXISTS idx_won_prizes_shop_phone ON won_prizes(shop_id, phone);
+CREATE INDEX IF NOT EXISTS idx_won_prizes_full_name ON won_prizes(full_name);
 CREATE INDEX IF NOT EXISTS idx_wheel_spins_shop_spin_date ON wheel_spins(shop_id, spin_date);

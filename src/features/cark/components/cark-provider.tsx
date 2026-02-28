@@ -50,6 +50,7 @@ interface Prize {
 interface WheelSpinResult {
   id: string
   shop_id: string
+  full_name: string | null
   email: string | null
   phone: string | null
   prize_name: string
@@ -262,6 +263,7 @@ export function CarkProvider({ children }: { children: ReactNode }) {
         .select(`
           id,
           shop_id,
+          full_name,
           email,
           phone,
           coupon_code,
@@ -276,6 +278,7 @@ export function CarkProvider({ children }: { children: ReactNode }) {
       const transformedData: WheelSpinResult[] = (data || []).map((item: any) => ({
         id: item.id,
         shop_id: item.shop_id,
+        full_name: item.full_name,
         email: item.email,
         phone: item.phone,
         prize_name: item.prize?.name || 'Bilinmeyen Ödül',

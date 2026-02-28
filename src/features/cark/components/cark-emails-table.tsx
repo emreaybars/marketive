@@ -95,6 +95,7 @@ export function CarkEmailsTable() {
     return wheelSpins.filter((spin) => {
       const searchTerm = searchQuery.toLowerCase()
       return (
+        (spin.full_name?.toLowerCase().includes(searchTerm) || false) ||
         (spin.email?.toLowerCase().includes(searchTerm) || false) ||
         (spin.phone?.toLowerCase().includes(searchTerm) || false) ||
         spin.prize_name.toLowerCase().includes(searchTerm)
@@ -104,6 +105,25 @@ export function CarkEmailsTable() {
 
   // Kolon tanımları
   const columns: ColumnDef<WheelSpinResult>[] = [
+    {
+      accessorKey: 'full_name',
+      header: ({ column }) => {
+        return (
+          <Button
+            variant="ghost"
+            onClick={() => column.toggleSorting(column.getIsSorted() === 'asc')}
+            className="h-8 px-0"
+          >
+            Ad Soyad
+            <ArrowUpDown className="ml-2 h-3 w-3" />
+          </Button>
+        )
+      },
+      cell: ({ row }) => {
+        const fullName = row.original.full_name
+        return <div className="font-medium">{fullName || '-'}</div>
+      },
+    },
     {
       accessorKey: 'contact',
       header: ({ column }) => {
@@ -122,7 +142,7 @@ export function CarkEmailsTable() {
         const email = row.original.email
         const phone = row.original.phone
         return (
-          <div className="font-medium">
+          <div className="text-sm text-muted-foreground">
             {email || phone || '-'}
           </div>
         )
@@ -212,7 +232,7 @@ export function CarkEmailsTable() {
             <div className="relative flex-1 sm:w-[200px]">
               <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
               <Input
-                placeholder="E-posta, telefon veya ödül ara..."
+                placeholder="Ad, e-posta, telefon veya ödül ara..."
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
                 className="pl-9"

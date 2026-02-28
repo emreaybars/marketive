@@ -1,7 +1,7 @@
 /**
  * Çarkıfelek Widget - Premium Design
- * Modern, animated wheel with email/phone capture
- * Version 3.1.0
+ * Modern, animated wheel with email/phone capture + full name
+ * Version 3.2.0
  */
 
 (function() {
@@ -178,15 +178,16 @@
       });
   }
 
-  function logSpin(prizeId, contact) {
+  function logSpin(prizeId, fullName, contact) {
     if (!prizeId || !contact) return;
 
-    log('Kaydediliyor:', prizeId, contact);
+    log('Kaydediliyor:', prizeId, fullName, contact);
 
     var contactType = widgetData.shop.contactInfoType;
     var params = {
       p_shop_uuid: shopUuid,
       p_prize_id: prizeId,
+      p_full_name: fullName,
       p_ip_address: null,
       p_user_agent: navigator.userAgent
     };
@@ -252,7 +253,7 @@
     var inputPlaceholder = isPhone ? 'Telefon numaranız (5XX XXX XX XX)' : 'E-posta adresiniz';
     var inputType = isPhone ? 'tel' : 'email';
     var inputId = isPhone ? 'carkifelek-phone' : 'carkifelek-email';
-    var iconEmoji = isPhone ? '📱' : '📧';
+    var inputIcon = isPhone ? '📱' : '📧';
 
     return '<div id="carkifelek-widget" style="' + getWidgetStyles() + '">' +
       '<button id="carkifelek-toggle" style="' + getToggleButtonStyles() + '">' +
@@ -276,7 +277,8 @@
           '</div>' +
           '<div id="carkifelek-result" style="' + getResultStyles() + '"></div>' +
           '<div id="carkifelek-form" style="' + getFormStyles() + '">' +
-            '<div style="display: flex; gap: 10px; margin-bottom: 10px;">' +
+            '<div style="display: flex; flex-direction: column; gap: 10px; margin-bottom: 10px;">' +
+              '<input type="text" id="carkifelek-fullname" placeholder="Ad Soyad" style="' + getInputStyles() + '" />' +
               '<input type="' + inputType + '" id="' + inputId + '" placeholder="' + inputPlaceholder + '" style="' + getInputStyles() + '" />' +
             '<button id="carkifelek-spin" style="' + getSpinButtonStyles() + '">ÇEVİR!</button>' +
             '</div>' +
@@ -404,8 +406,9 @@
     var isPhone = widgetData.shop.contactInfoType === 'phone';
     var inputId = isPhone ? 'carkifelek-phone' : 'carkifelek-email';
     var contactInput = document.getElementById(inputId);
+    var fullNameInput = document.getElementById('carkifelek-fullname');
 
-    if (!toggleBtn || !modal || !closeBtn || !spinBtn || !contactInput) {
+    if (!toggleBtn || !modal || !closeBtn || !spinBtn || !contactInput || !fullNameInput) {
       logError('Bazı elementler bulunamadı');
       return;
     }
@@ -420,8 +423,23 @@
     };
 
     spinBtn.onclick = function() {
+      var fullName = fullNameInput.value.trim();
       var contact = contactInput.value.trim();
 
+      // Validate full name
+      if (!fullName) {
+        showResult('Lütfen adınızı ve soyadınızı girin 😊', '#ef4444');
+        fullNameInput.focus();
+        return;
+      }
+
+      if (fullName.length < 3) {
+        showResult('Lütfen geçerli bir ad soyad girin (en az 3 karakter) 📝', '#ef4444');
+        fullNameInput.focus();
+        return;
+      }
+
+      // Validate contact
       if (!contact) {
         var emptyMsg = isPhone ? 'Lütfen telefon numaranızı girin 😊' : 'Lütfen e-posta adresinizi girin 😊';
         showResult(emptyMsg, '#ef4444');
@@ -458,12 +476,13 @@
           return;
         }
 
-        // Contact valid, spin the wheel
+        // All valid, spin the wheel
         selectedPrize = selectPrize();
+        fullNameInput.disabled = true;
         contactInput.disabled = true;
         spinBtn.disabled = true;
         spinBtn.textContent = 'ÇEVİRİLİYOR...';
-        spinWheel(selectedPrize, contact);
+        spinWheel(selectedPrize, fullName, contact);
       });
     };
 
@@ -478,11 +497,13 @@
     };
 
     // Enter key to spin
-    contactInput.addEventListener('keypress', function(e) {
+    var handleEnterKey = function(e) {
       if (e.key === 'Enter') {
         spinBtn.click();
       }
-    });
+    };
+    fullNameInput.addEventListener('keypress', handleEnterKey);
+    contactInput.addEventListener('keypress', handleEnterKey);
   }
 
   // ============================================
@@ -588,7 +609,7 @@
     return widgetData.prizes[0];
   }
 
-  function spinWheel(prize, contact) {
+  function spinWheel(prize, fullName, contact) {
     if (isSpinning) return;
     isSpinning = true;
 
@@ -616,7 +637,7 @@
         requestAnimationFrame(animate);
       } else {
         isSpinning = false;
-        showSuccess(prize, contact);
+        showSuccess(prize, fullName, contact);
       }
     }
 
@@ -631,7 +652,7 @@
     }
   }
 
-  function showSuccess(prize, contact) {
+  function showSuccess(prize, fullName, contact) {
     var formEl = document.getElementById('carkifelek-form');
     var resultEl = document.getElementById('carkifelek-result');
     var successEl = document.getElementById('carkifelek-success');
@@ -655,14 +676,15 @@
       couponEl.style.display = 'none';
     }
 
-    // Log to database
-    logSpin(prize.id, contact);
+    // Log to database with full name
+    logSpin(prize.id, fullName, contact);
   }
 
   function resetWidget() {
     var formEl = document.getElementById('carkifelek-form');
     var resultEl = document.getElementById('carkifelek-result');
     var successEl = document.getElementById('carkifelek-success');
+    var fullNameInput = document.getElementById('carkifelek-fullname');
     var isPhone = widgetData.shop.contactInfoType === 'phone';
     var inputId = isPhone ? 'carkifelek-phone' : 'carkifelek-email';
     var contactInput = document.getElementById(inputId);
@@ -677,6 +699,10 @@
     }
     if (successEl) {
       successEl.style.display = 'none';
+    }
+    if (fullNameInput) {
+      fullNameInput.value = '';
+      fullNameInput.disabled = false;
     }
     if (contactInput) {
       contactInput.value = '';
@@ -756,7 +782,7 @@
 
   // Add CSS animations
   var style = document.createElement('style');
-  var isPhoneInput = '#carkifelek-email, #carkifelek-phone';
+  var allInputs = '#carkifelek-fullname, #carkifelek-email, #carkifelek-phone';
   style.textContent = `
     @keyframes fadeIn {
       from { opacity: 0; }
@@ -774,7 +800,7 @@
     #carkifelek-modal button:hover {
       transform: scale(1.05);
     }
-    ${isPhoneInput}:focus {
+    ${allInputs}:focus {
       border-color: #f59e0b !important;
       box-shadow: 0 0 0 3px rgba(245, 158, 11, 0.2);
     }
