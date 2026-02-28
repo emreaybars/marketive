@@ -70,30 +70,30 @@ BEGIN
   -- Return shop data with widget settings and prizes
   RETURN QUERY
   SELECT DISTINCT
-    s.name AS shop_name,
-    s.logo_url AS shop_logo,
-    s.website_url AS shop_url,
-    s.brand_name,
-    s.contact_info_type,
-    ws.title AS widget_title,
-    ws.description AS widget_description,
-    ws.button_text AS widget_button_text,
+    s.name::TEXT AS shop_name,
+    s.logo_url::TEXT AS shop_logo,
+    s.website_url::TEXT AS shop_url,
+    s.brand_name::TEXT,
+    s.contact_info_type::TEXT,
+    ws.title::TEXT AS widget_title,
+    ws.description::TEXT AS widget_description,
+    ws.button_text::TEXT AS widget_button_text,
     ws.show_on_load AS widget_show_on_load,
     ws.popup_delay AS widget_popup_delay,
-    ws.background_color AS widget_background_color,
-    ws.button_color AS widget_button_color,
-    ws.title_color AS widget_title_color,
-    ws.description_color AS widget_description_color,
+    ws.background_color::TEXT AS widget_background_color,
+    ws.button_color::TEXT AS widget_button_color,
+    ws.title_color::TEXT AS widget_title_color,
+    ws.description_color::TEXT AS widget_description_color,
     (
       SELECT jsonb_agg(
         jsonb_build_object(
           'id', p.id,
-          'name', p.name,
-          'description', p.description,
-          'redirect_url', p.redirect_url,
-          'color', p.color,
+          'name', p.name::TEXT,
+          'description', p.description::TEXT,
+          'redirect_url', p.redirect_url::TEXT,
+          'color', p.color::TEXT,
           'chance', p.chance,
-          'coupon_codes', p.coupon_codes,
+          'coupon_codes', p.coupon_codes::TEXT,
           'display_order', p.display_order
         ) ORDER BY p.display_order
       )
