@@ -288,6 +288,8 @@ export function CarkProvider({ children }: { children: ReactNode }) {
           coupon_code,
           spin_date,
           prize_id,
+          prize_type,
+          prize_value,
           prize:prizes(name)
         `)
         .order('spin_date', { ascending: false })
@@ -301,7 +303,8 @@ export function CarkProvider({ children }: { children: ReactNode }) {
         full_name: item.full_name,
         email: item.email,
         phone: item.phone,
-        prize_name: item.prize?.name || item.prize_type || 'Bilinmeyen Ödül',
+        // Try multiple sources for prize name
+        prize_name: item.prize?.name || item.prize_value || item.prize_type || 'Bilinmeyen Ödül',
         coupon_code: item.coupon_code,
         created_at: item.spin_date
       }))
