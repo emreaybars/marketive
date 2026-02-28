@@ -40,3 +40,23 @@ $$;
 -- Grant execute permission
 GRANT EXECUTE ON FUNCTION get_user_wheel_spins TO authenticated;
 GRANT EXECUTE ON FUNCTION get_user_wheel_spins TO anon;
+
+-- ============================================
+-- Alternative simpler version without JOIN if needed
+-- ============================================
+
+CREATE OR REPLACE FUNCTION get_user_wheel_spins_simple(p_customer_id TEXT)
+RETURNS SETOF won_prizes
+LANGUAGE plpgsql
+SECURITY DEFINER
+AS $$
+BEGIN
+  RETURN QUERY
+  SELECT wp.*
+  FROM won_prizes wp
+  WHERE wp.shop_id IN (
+    SELECT id FROM shops WHERE customer_id = p_customer_id
+  )
+  ORDER BY wp.won_at DESC;
+END;
+$$;
