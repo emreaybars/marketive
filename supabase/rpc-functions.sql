@@ -29,18 +29,31 @@ AS $$
 DECLARE
   v_shop_id TEXT;
   v_shop_uuid UUID;
+  v_decoded TEXT;
+  v_payload JSON;
 BEGIN
-  -- Token'dan shop_id'yi al (base64url decode)
-  SELECT
-    payload->>'sid' INTO v_shop_id
-  FROM (
-    SELECT
-      convert_from(decode(replace(replace(p_token, '-', '+'), '_', '/'), 'base64'), 'utf8')::json AS payload
-  ) t
-  WHERE
-    payload::jsonb ? 'sig' IS NOT NULL;
+  -- Base64URL'dan decode et (padding ekle)
+  -- Base64URL: - yerine +, _ yerine /, padding yok
+  v_decoded := convert_from(
+    decode(
+      replace(replace(p_token, '-', '+'), '_', '/') || repeat('=', (4 - length(p_token) % 4) % 4),
+      'base64'
+    ),
+    'utf8'
+  );
 
-  IF NOT FOUND THEN
+  -- JSON parse
+  v_payload := v_decoded::json;
+
+  -- Token validation - signature check
+  IF v_payload ? 'sig' IS NULL THEN
+    RAISE EXCEPTION 'invalid_token' USING ERRCODE = '45000';
+  END IF;
+
+  -- Shop ID'yi al
+  v_shop_id := v_payload->>'sid';
+
+  IF v_shop_id IS NULL THEN
     RAISE EXCEPTION 'invalid_token' USING ERRCODE = '45000';
   END IF;
 
@@ -51,7 +64,7 @@ BEGIN
     AND active = true
   LIMIT 1;
 
-  IF NOT FOUND THEN
+  IF v_shop_uuid IS NULL THEN
     RAISE EXCEPTION 'shop_not_found' USING ERRCODE = '45000';
   END IF;
 
@@ -239,6 +252,14 @@ DROP POLICY IF EXISTS "users_can_insert_won_prizes" ON won_prizes;
 DROP POLICY IF EXISTS "users_can_insert_wheel_spins" ON wheel_spins;
 DROP POLICY IF EXISTS "users_can_insert_views" ON widget_views;
 
+-- Enable RLS
+ALTER TABLE shops ENABLE ROW LEVEL SECURITY;
+ALTER TABLE widget_settings ENABLE ROW LEVEL SECURITY;
+ALTER TABLE prizes ENABLE ROW LEVEL SECURITY;
+ALTER TABLE won_prizes ENABLE ROW LEVEL SECURITY;
+ALTER TABLE wheel_spins ENABLE ROW LEVEL SECURITY;
+ALTER TABLE widget_views ENABLE ROW LEVEL SECURITY;
+
 -- Herkes widget verilerini görebilir (RPC functions public)
 CREATE POLICY "allow_public_widget_read" ON shops
   FOR SELECT
@@ -272,7 +293,7 @@ CREATE POLICY "users_can_insert_views" ON widget_views
   WITH CHECK (true);
 
 -- ============================================
--- VARSAYILAN SORGUNLARIK INDEXLER
+-- VARSAYILAN INDEXLER
 -- ============================================
 
 CREATE INDEX IF NOT EXISTS idx_shops_shop_id ON shops(shop_id) WHERE active = true;
@@ -281,10 +302,8 @@ CREATE INDEX IF NOT EXISTS idx_won_prizes_shop_email ON won_prizes(shop_id, emai
 CREATE INDEX IF NOT EXISTS idx_wheel_spins_shop_spin_date ON wheel_spins(shop_id, spin_date);
 
 -- ============================================
--- TEST (İSTEYE BAĞLI)
+-- TEST
 -- ============================================
 
 -- Test widget data
 -- SELECT * FROM get_widget_data('TEST_TOKEN');
-
--- Her şey hazır!
