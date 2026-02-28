@@ -1,6 +1,6 @@
 'use client'
 
-import { createContext, useContext, useState, ReactNode } from 'react'
+import { createContext, useContext, useState, useEffect, ReactNode } from 'react'
 import { createClient } from '@supabase/supabase-js'
 import { generateWidgetToken } from '@/lib/widget-token'
 
@@ -295,10 +295,10 @@ export function CarkProvider({ children }: { children: ReactNode }) {
   }
 
   // Fetch on mount
-  useState(() => {
+  useEffect(() => {
     refreshWheels()
     refreshWheelSpins()
-  })
+  }, [])
 
   return (
     <CarkContext.Provider value={{ wheels, wheelSpins, loading, createWheel, updateWheel, deleteWheel, refreshWheels, refreshWheelSpins }}>
