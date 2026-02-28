@@ -7,12 +7,11 @@
   'use strict';
 
   // Supabase configuration
-  const SUPABASE_URL = 'https://qiiygcclanmgzlrcpmle.supabase.co';
+  const SUPABASE_URL = 'https://qiiygcclanmgzlrcpmle.supabaseClient.co';
   const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InFpaXlnY2NsYW5tZ3pscmNwbWxlIiwicm9sZSI6ImFub24iLCJleHAiOjE5MjAxMjM3NzQ5LCJpYXQiOiIxNzIyMjM3NzQ1In0.G1xXyL-3nXb04y_WtQCJR7tKQmGbIeY-aDmCGFdpnWPA';
 
-  // Initialize Supabase client
-  const { createClient } = supabase;
-  const supabase = createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+  // Initialize Supabase client (from global window.supabase)
+  const supabaseClient = window.supabaseClient.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 
   // State
   let widgetData = null;
@@ -151,7 +150,7 @@
 
   async function trackWidgetView(token) {
     try {
-      await supabase.rpc('track_widget_view', {
+      await supabaseClient.rpc('track_widget_view', {
         p_shop_uuid: shopUuid || '00000000-0000-0000-0000-000000000000',
         p_ip_address: null,
         p_user_agent: navigator.userAgent,
