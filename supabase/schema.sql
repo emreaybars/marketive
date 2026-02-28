@@ -22,7 +22,7 @@ CREATE TABLE IF NOT EXISTS users (
 CREATE TABLE IF NOT EXISTS shops (
   id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
   shop_id VARCHAR(50) UNIQUE NOT NULL,
-  customer_id UUID REFERENCES users(id) ON DELETE SET NULL,
+  customer_id TEXT, -- Clerk user ID (user_xxx format) - using Clerk for authentication
   owner_token VARCHAR(72),
   owner_type TEXT DEFAULT 'user' CHECK (owner_type IN ('user', 'token', 'api')),
   name VARCHAR(100) NOT NULL,
