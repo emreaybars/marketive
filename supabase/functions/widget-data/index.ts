@@ -4,13 +4,6 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts"
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2"
 
-const corsHeaders = {
-  'Access-Control-Allow-Origin': '*',
-  'Access-Control-Allow-Headers': '*',
-  'Access-Control-Allow-Methods': 'GET, POST, OPTIONS',
-  'Access-Control-Max-Age': '86400',
-}
-
 const widgetSecret = Deno.env.get('WIDGET_SECRET') || 'default-secret'
 
 // Verify shop token (async function)
@@ -44,6 +37,19 @@ async function verifyShopToken(token: string): Promise<{ shopId: string; shopUui
 }
 
 serve(async (req) => {
+  // Get origin from request for CORS
+  const origin = req.headers.get('origin')
+
+  // CORS headers - allow the requesting origin
+  const corsHeaders = {
+    'Access-Control-Allow-Origin': origin || '*',
+    'Access-Control-Allow-Headers': '*',
+    'Access-Control-Allow-Methods': 'GET, POST, OPTIONS',
+    'Access-Control-Allow-Credentials': 'true',
+    'Access-Control-Max-Age': '86400',
+    'Vary': 'Origin'
+  }
+
   // Handle CORS preflight
   if (req.method === 'OPTIONS') {
     return new Response('ok', { headers: corsHeaders })
@@ -166,7 +172,7 @@ serve(async (req) => {
   } catch (error) {
     console.error('Widget data error:', error)
     return new Response(
-      JSON.stringify({ error: 'Sunucu hatası' }),
+      JSON.stringify({ error: 'Sunucu hatası', details: error.message }),
       { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
     )
   }

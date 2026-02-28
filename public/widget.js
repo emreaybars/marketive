@@ -10,8 +10,7 @@
   // Configuration
   const CONFIG = {
     shopToken: '',
-    apiBaseUrl: 'https://qiiygcclanmgzlrcpmle.supabase.co/functions/v1', // Supabase Edge Functions
-    apiKey: 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InFpaXlnY2NsYW5tZ3pscmNwbWxlIiwicm9sZSI6ImFub24iLCJleHAiOjE5ODM4MTI5OTZ9.CRUDP1Lc6HGkUqY0Q_cwl6FqZf_PxN8qYi50cKLIXngk' // Supabase anon key
+    apiBaseUrl: window.location.origin, // Same domain (Vercel)
   };
 
   // State
@@ -73,12 +72,11 @@
 
     try {
       const response = await fetch(
-        `${CONFIG.apiBaseUrl}/widget-data?token=${encodeURIComponent(CONFIG.shopToken)}`,
+        `${CONFIG.apiBaseUrl}/api/widget-data?token=${encodeURIComponent(CONFIG.shopToken)}`,
         {
           method: 'GET',
           headers: {
-            'Content-Type': 'application/json',
-            'apikey': CONFIG.apiKey
+            'Content-Type': 'application/json'
           }
         }
       );
@@ -104,7 +102,7 @@
     if (!widgetData || !email) return false;
 
     try {
-      const response = await fetch(`${CONFIG.apiBaseUrl}/check-email`, {
+      const response = await fetch(`${CONFIG.apiBaseUrl}/api/check-email`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -128,7 +126,7 @@
     const sessionId = getSessionId();
 
     try {
-      await fetch(`${CONFIG.apiBaseUrl}/log-spin`, {
+      await fetch(`${CONFIG.apiBaseUrl}/api/log-spin`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -154,7 +152,7 @@
     const sessionId = getSessionId();
 
     try {
-      await fetch(`${CONFIG.apiBaseUrl}/view`, {
+      await fetch(`${CONFIG.apiBaseUrl}/api/view`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
