@@ -449,7 +449,7 @@
       } else {
         isSpinning = false;
         showPrize(prize);
-        await logSpin(prizeId, email);
+        logSpin(prizeId, email); // Log async, fire and forget
       }
     }
 
