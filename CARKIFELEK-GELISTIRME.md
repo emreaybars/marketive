@@ -263,8 +263,9 @@ vercel --prod --yes
 3. ✅ Embed kodunu düzeltmek
 4. ✅ Çark listesini göstermek
 5. ✅ Dönüş tablosunu Supabase'den çekmek
-6. ⏳ **RPC fonksiyonlarını Supabase'e deploy etmek**
-7. ⏳ **Widget'ı test etmek (CORS olmadan)**
+6. ✅ **RPC fonksiyonlarını Supabase'e deploy etmek**
+7. ✅ **Premium tasarım ile widget'ı güncellemek**
+8. ✅ **Production'a deploy etmek**
 
 ### Test Edilmesi Gerekenler:
 1. ✅ Çark oluşturma
@@ -272,8 +273,9 @@ vercel --prod --yes
 3. ✅ Widget yüklenmesi
 4. ✅ Veri çekme (API)
 5. ✅ Çark çevirme
-6. ⏳ Dönüş kaydı tutma
-7. ⏳ Admin panelde veri görüntüleme
+6. ✅ Email doğrulama ve çark çevirme
+7. ✅ Dönüş kaydı tutma (database)
+8. ✅ Admin panelde veri görüntüleme
 
 ### Production İçin:
 - **Vercel**: https://marketive-main.vercel.app (Frontend + Widget)

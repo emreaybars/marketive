@@ -107,8 +107,8 @@ BEGIN
 END;
 $$;
 
--- 2. Email daha önce kullanıldı mı kontrol et
-CREATE OR REPLACE FUNCTION check_email_used(p_shop_uuid UUID, p_email TEXT)
+-- 2. İletişim bilgisi daha önce kullanıldı mı kontrol et (email veya phone)
+CREATE OR REPLACE FUNCTION check_contact_used(p_shop_uuid UUID, p_contact TEXT, p_contact_type TEXT)
 RETURNS BOOLEAN
 LANGUAGE plpgsql
 SECURITY DEFINER
@@ -116,22 +116,36 @@ AS $$
 DECLARE
   v_used BOOLEAN;
 BEGIN
-  SELECT EXISTS (
-    SELECT 1 FROM won_prizes wp
-    WHERE wp.shop_id = p_shop_uuid
-      AND wp.email = LOWER(p_email)
-      AND wp.won_at > NOW() - INTERVAL '30 days'
-  ) INTO v_used;
+  -- Email kontrolü
+  IF p_contact_type = 'email' THEN
+    SELECT EXISTS (
+      SELECT 1 FROM won_prizes wp
+      WHERE wp.shop_id = p_shop_uuid
+        AND wp.email = LOWER(p_contact)
+        AND wp.won_at > NOW() - INTERVAL '30 days'
+    ) INTO v_used;
+  -- Phone kontrolü
+  ELSIF p_contact_type = 'phone' THEN
+    SELECT EXISTS (
+      SELECT 1 FROM won_prizes wp
+      WHERE wp.shop_id = p_shop_uuid
+        AND wp.phone = p_contact
+        AND wp.won_at > NOW() - INTERVAL '30 days'
+    ) INTO v_used;
+  ELSE
+    v_used := false;
+  END IF;
 
   RETURN COALESCE(v_used, false);
 END;
 $$;
 
--- 3. Çark dönüşü kaydet
+-- 3. Çark dönüşü kaydet (email veya phone ile)
 CREATE OR REPLACE FUNCTION log_wheel_spin(
   p_shop_uuid UUID,
   p_prize_id UUID,
   p_email TEXT DEFAULT NULL,
+  p_phone TEXT DEFAULT NULL,
   p_ip_address TEXT DEFAULT NULL,
   p_user_agent TEXT DEFAULT NULL
 )
@@ -156,6 +170,7 @@ BEGIN
   INSERT INTO wheel_spins (
     shop_id,
     email,
+    phone,
     result,
     prize_type,
     coupon_code,
@@ -165,7 +180,8 @@ BEGIN
     spin_date
   ) VALUES (
     p_shop_uuid,
-    LOWER(p_email),
+    CASE WHEN p_email IS NOT NULL THEN LOWER(p_email) ELSE NULL END,
+    p_phone,
     'won',
     'prize',
     v_coupon_code,
@@ -181,13 +197,15 @@ BEGIN
     spin_id,
     prize_id,
     email,
+    phone,
     coupon_code,
     won_at
   ) VALUES (
     p_shop_uuid,
     v_spin_id,
     p_prize_id,
-    LOWER(p_email),
+    CASE WHEN p_email IS NOT NULL THEN LOWER(p_email) ELSE NULL END,
+    p_phone,
     v_coupon_code,
     NOW()
   );
@@ -259,4 +277,5 @@ ALTER TABLE widget_views DISABLE ROW LEVEL SECURITY;
 CREATE INDEX IF NOT EXISTS idx_shops_shop_id ON shops(shop_id) WHERE active = true;
 CREATE INDEX IF NOT EXISTS idx_prizes_shop_id ON prizes(shop_id) WHERE active = true;
 CREATE INDEX IF NOT EXISTS idx_won_prizes_shop_email ON won_prizes(shop_id, email);
+CREATE INDEX IF NOT EXISTS idx_won_prizes_shop_phone ON won_prizes(shop_id, phone);
 CREATE INDEX IF NOT EXISTS idx_wheel_spins_shop_spin_date ON wheel_spins(shop_id, spin_date);

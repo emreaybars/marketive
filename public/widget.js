@@ -1,7 +1,7 @@
 /**
  * Çarkıfelek Widget - Premium Design
- * Modern, animated wheel with email capture
- * Version 3.0.0
+ * Modern, animated wheel with email/phone capture
+ * Version 3.1.0
  */
 
 (function() {
@@ -46,6 +46,25 @@
 
   function isValidEmail(email) {
     return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
+  }
+
+  function isValidPhone(phone) {
+    // Turkish phone format: 5XXXXXXXXX or +905XXXXXXXXX or 05XXXXXXXXX
+    var cleaned = phone.replace(/\s/g, '').replace(/\(/g, '').replace(/\)/g, '').replace(/-/g, '');
+    return /^(\+?90|0)?5\d{8}$/.test(cleaned);
+  }
+
+  function formatPhone(phone) {
+    // Clean and format phone number
+    var cleaned = phone.replace(/\s/g, '').replace(/\(/g, '').replace(/\)/g, '').replace(/-/g, '');
+    if (cleaned.startsWith('90')) {
+      cleaned = cleaned.substring(2);
+    } else if (cleaned.startsWith('+90')) {
+      cleaned = cleaned.substring(3);
+    } else if (cleaned.startsWith('0')) {
+      cleaned = cleaned.substring(1);
+    }
+    return '5' + cleaned.substring(1);
   }
 
   // ============================================
@@ -113,7 +132,7 @@
             logo: widget.shop_logo,
             url: widget.shop_url,
             brandName: widget.brand_name,
-            contactInfoType: widget.contact_info_type
+            contactInfoType: widget.contact_info_type || 'email'
           },
           widget: {
             title: widget.widget_title || '🎁 Şansını Deneme!',
@@ -136,39 +155,51 @@
       });
   }
 
-  function checkEmailUsed(email, callback) {
-    if (!email || !shopUuid) {
+  function checkContactUsed(contact, callback) {
+    if (!contact || !shopUuid) {
       callback(null, false);
       return;
     }
 
+    var contactType = widgetData.shop.contactInfoType;
+
     supabaseClient
-      .rpc('check_email_used', {
+      .rpc('check_contact_used', {
         p_shop_uuid: shopUuid,
-        p_email: email
+        p_contact: contact,
+        p_contact_type: contactType
       })
       .then(function(result) {
         callback(null, result.data || false);
       })
       .catch(function(err) {
-        logError('Email kontrol hatası', err);
+        logError('İletişim kontrol hatası', err);
         callback(null, false);
       });
   }
 
-  function logSpin(prizeId, email) {
-    if (!prizeId || !email) return;
+  function logSpin(prizeId, contact) {
+    if (!prizeId || !contact) return;
 
-    log('Kaydediliyor:', prizeId, email);
+    log('Kaydediliyor:', prizeId, contact);
+
+    var contactType = widgetData.shop.contactInfoType;
+    var params = {
+      p_shop_uuid: shopUuid,
+      p_prize_id: prizeId,
+      p_ip_address: null,
+      p_user_agent: navigator.userAgent
+    };
+
+    // Add email or phone parameter based on contact type
+    if (contactType === 'email') {
+      params.p_email = contact;
+    } else {
+      params.p_phone = contact;
+    }
 
     supabaseClient
-      .rpc('log_wheel_spin', {
-        p_shop_uuid: shopUuid,
-        p_prize_id: prizeId,
-        p_email: email,
-        p_ip_address: null,
-        p_user_agent: navigator.userAgent
-      })
+      .rpc('log_wheel_spin', params)
       .then(function(result) {
         log('Kayıt başarılı:', result.data);
       })
@@ -217,7 +248,11 @@
   }
 
   function buildWidgetHTML() {
-    var colors = widgetData.prizes.map(function(p) { return p.color; });
+    var isPhone = widgetData.shop.contactInfoType === 'phone';
+    var inputPlaceholder = isPhone ? 'Telefon numaranız (5XX XXX XX XX)' : 'E-posta adresiniz';
+    var inputType = isPhone ? 'tel' : 'email';
+    var inputId = isPhone ? 'carkifelek-phone' : 'carkifelek-email';
+    var iconEmoji = isPhone ? '📱' : '📧';
 
     return '<div id="carkifelek-widget" style="' + getWidgetStyles() + '">' +
       '<button id="carkifelek-toggle" style="' + getToggleButtonStyles() + '">' +
@@ -242,7 +277,7 @@
           '<div id="carkifelek-result" style="' + getResultStyles() + '"></div>' +
           '<div id="carkifelek-form" style="' + getFormStyles() + '">' +
             '<div style="display: flex; gap: 10px; margin-bottom: 10px;">' +
-              '<input type="email" id="carkifelek-email" placeholder="E-posta adresiniz" style="' + getInputStyles() + '" />' +
+              '<input type="' + inputType + '" id="' + inputId + '" placeholder="' + inputPlaceholder + '" style="' + getInputStyles() + '" />' +
             '<button id="carkifelek-spin" style="' + getSpinButtonStyles() + '">ÇEVİR!</button>' +
             '</div>' +
             '<p style="font-size: 11px; color: #9ca3af; text-align: center;">🔒 Verileriniz güvende</p>' +
@@ -365,10 +400,12 @@
     var modal = document.getElementById('carkifelek-modal');
     var closeBtn = document.getElementById('carkifelek-close');
     var spinBtn = document.getElementById('carkifelek-spin');
-    var emailInput = document.getElementById('carkifelek-email');
     var closeSuccessBtn = document.getElementById('carkifelek-close-success');
+    var isPhone = widgetData.shop.contactInfoType === 'phone';
+    var inputId = isPhone ? 'carkifelek-phone' : 'carkifelek-email';
+    var contactInput = document.getElementById(inputId);
 
-    if (!toggleBtn || !modal || !closeBtn || !spinBtn || !emailInput) {
+    if (!toggleBtn || !modal || !closeBtn || !spinBtn || !contactInput) {
       logError('Bazı elementler bulunamadı');
       return;
     }
@@ -383,37 +420,50 @@
     };
 
     spinBtn.onclick = function() {
-      var email = emailInput.value.trim();
+      var contact = contactInput.value.trim();
 
-      if (!email) {
-        showResult('Lütfen e-posta adresinizi girin 😊', '#ef4444');
-        emailInput.focus();
+      if (!contact) {
+        var emptyMsg = isPhone ? 'Lütfen telefon numaranızı girin 😊' : 'Lütfen e-posta adresinizi girin 😊';
+        showResult(emptyMsg, '#ef4444');
+        contactInput.focus();
         return;
       }
 
-      if (!isValidEmail(email)) {
-        showResult('Geçerli bir e-posta adresi girin 📧', '#ef4444');
-        emailInput.focus();
-        return;
+      // Validate based on type
+      if (isPhone) {
+        if (!isValidPhone(contact)) {
+          showResult('Geçerli bir telefon numarası girin 📱 (5XX XXX XX XX)', '#ef4444');
+          contactInput.focus();
+          return;
+        }
+        // Format phone number
+        contact = formatPhone(contact);
+      } else {
+        if (!isValidEmail(contact)) {
+          showResult('Geçerli bir e-posta adresi girin 📧', '#ef4444');
+          contactInput.focus();
+          return;
+        }
       }
 
-      checkEmailUsed(email, function(err, used) {
+      checkContactUsed(contact, function(err, used) {
         if (err) {
-          logError('Email kontrol hatası', err);
+          logError('İletişim kontrol hatası', err);
           return;
         }
 
         if (used) {
-          showResult('Bu e-posta ile zaten çark çevirdiniz! 🔄', '#f59e0b');
+          var usedMsg = isPhone ? 'Bu telefon numarası ile zaten çark çevirdiniz! 🔄' : 'Bu e-posta ile zaten çark çevirdiniz! 🔄';
+          showResult(usedMsg, '#f59e0b');
           return;
         }
 
-        // Email valid, spin the wheel
+        // Contact valid, spin the wheel
         selectedPrize = selectPrize();
-        emailInput.disabled = true;
+        contactInput.disabled = true;
         spinBtn.disabled = true;
         spinBtn.textContent = 'ÇEVİRİLİYOR...';
-        spinWheel(selectedPrize, email);
+        spinWheel(selectedPrize, contact);
       });
     };
 
@@ -428,7 +478,7 @@
     };
 
     // Enter key to spin
-    emailInput.addEventListener('keypress', function(e) {
+    contactInput.addEventListener('keypress', function(e) {
       if (e.key === 'Enter') {
         spinBtn.click();
       }
@@ -538,7 +588,7 @@
     return widgetData.prizes[0];
   }
 
-  function spinWheel(prize, email) {
+  function spinWheel(prize, contact) {
     if (isSpinning) return;
     isSpinning = true;
 
@@ -566,7 +616,7 @@
         requestAnimationFrame(animate);
       } else {
         isSpinning = false;
-        showSuccess(prize, email);
+        showSuccess(prize, contact);
       }
     }
 
@@ -581,7 +631,7 @@
     }
   }
 
-  function showSuccess(prize, email) {
+  function showSuccess(prize, contact) {
     var formEl = document.getElementById('carkifelek-form');
     var resultEl = document.getElementById('carkifelek-result');
     var successEl = document.getElementById('carkifelek-success');
@@ -606,14 +656,16 @@
     }
 
     // Log to database
-    logSpin(prize.id, email);
+    logSpin(prize.id, contact);
   }
 
   function resetWidget() {
     var formEl = document.getElementById('carkifelek-form');
     var resultEl = document.getElementById('carkifelek-result');
     var successEl = document.getElementById('carkifelek-success');
-    var emailInput = document.getElementById('carkifelek-email');
+    var isPhone = widgetData.shop.contactInfoType === 'phone';
+    var inputId = isPhone ? 'carkifelek-phone' : 'carkifelek-email';
+    var contactInput = document.getElementById(inputId);
     var spinBtn = document.getElementById('carkifelek-spin');
 
     if (formEl) {
@@ -626,9 +678,9 @@
     if (successEl) {
       successEl.style.display = 'none';
     }
-    if (emailInput) {
-      emailInput.value = '';
-      emailInput.disabled = false;
+    if (contactInput) {
+      contactInput.value = '';
+      contactInput.disabled = false;
     }
     if (spinBtn) {
       spinBtn.disabled = false;
@@ -704,6 +756,7 @@
 
   // Add CSS animations
   var style = document.createElement('style');
+  var isPhoneInput = '#carkifelek-email, #carkifelek-phone';
   style.textContent = `
     @keyframes fadeIn {
       from { opacity: 0; }
@@ -721,7 +774,7 @@
     #carkifelek-modal button:hover {
       transform: scale(1.05);
     }
-    #carkifelek-email:focus {
+    ${isPhoneInput}:focus {
       border-color: #f59e0b !important;
       box-shadow: 0 0 0 3px rgba(245, 158, 11, 0.2);
     }
