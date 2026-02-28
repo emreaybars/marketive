@@ -11,6 +11,7 @@
   const CONFIG = {
     shopToken: '',
     apiBaseUrl: 'https://qiiygcclanmgzlrcpmle.supabase.co/functions/v1', // Supabase Edge Functions
+    apiKey: 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InFpaXlnY2NsYW5tZ3pscmNwbWxlIiwicm9sZSI6ImFub24iLCJleHAiOjE5ODM4MTI5OTZ9.CRUDP1Lc6HGkUqY0Q_cwl6FqZf_PxN8qYi50cKLIXngk' // Supabase anon key
   };
 
   // State
@@ -77,7 +78,7 @@
           method: 'GET',
           headers: {
             'Content-Type': 'application/json',
-            'apikey': 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZS1kZW1vIiwicm9sZSI6ImFub24iLCJleHAiOjE5ODM4MTI5OTZ.CRUDP1Lc6HGkUqY0Q_cwl6FqZf_PxN8qYi50cKLIXngk'
+            'apikey': CONFIG.apiKey
           }
         }
       );
