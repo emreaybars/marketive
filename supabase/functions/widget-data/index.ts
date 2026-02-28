@@ -6,20 +6,24 @@ import { createClient } from "https://esm.sh/@supabase/supabase-js@2"
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
-  'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
+  'Access-Control-Allow-Headers': '*',
   'Access-Control-Allow-Methods': 'GET, POST, OPTIONS',
+  'Access-Control-Max-Age': '86400',
 }
 
 const widgetSecret = Deno.env.get('WIDGET_SECRET') || 'default-secret'
 
-// Verify shop token
-function verifyShopToken(token: string): { shopId: string; shopUuid: string } | null {
+// Verify shop token (async function)
+async function verifyShopToken(token: string): Promise<{ shopId: string; shopUuid: string } | null> {
   try {
-    // Base64url decode
-    const payload = JSON.parse(atob(token))
+    // Base64url to base64 conversion
+    let base64 = token.replace(/-/g, '+').replace(/_/g, '/')
+    while (base64.length % 4) base64 += '='
+
+    const payload = JSON.parse(atob(base64))
     const { sig, ...data } = payload
 
-    // Verify signature
+    // Verify signature - use same method as client
     const payloadStr = JSON.stringify(data)
     const textEncoder = new TextEncoder()
     const key = textEncoder.encode(payloadStr + widgetSecret)
@@ -28,11 +32,13 @@ function verifyShopToken(token: string): { shopId: string; shopUuid: string } | 
     const expectedSig = keyArray.map(b => b.toString(16).padStart(2, '0')).join('')
 
     if (sig !== expectedSig) {
+      console.log('Signature mismatch:', { sig, expectedSig })
       return null
     }
 
     return { shopId: data.sid, shopUuid: data.uid }
-  } catch {
+  } catch (error) {
+    console.log('Token verification error:', error)
     return null
   }
 }
@@ -54,7 +60,7 @@ serve(async (req) => {
       )
     }
 
-    const shopAuth = verifyShopToken(token)
+    const shopAuth = await verifyShopToken(token)
     if (!shopAuth) {
       return new Response(
         JSON.stringify({ error: 'Invalid token' }),

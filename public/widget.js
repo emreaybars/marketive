@@ -75,7 +75,10 @@
         `${CONFIG.apiBaseUrl}/widget-data?token=${encodeURIComponent(CONFIG.shopToken)}`,
         {
           method: 'GET',
-          headers: { 'Content-Type': 'application/json' }
+          headers: {
+            'Content-Type': 'application/json',
+            'apikey': 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZS1kZW1vIiwicm9sZSI6ImFub24iLCJleHAiOjE5ODM4MTI5OTZ.CRUDP1Lc6HGkUqY0Q_cwl6FqZf_PxN8qYi50cKLIXngk'
+          }
         }
       );
 
