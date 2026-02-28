@@ -104,15 +104,16 @@ export function CarkProvider({ children }: { children: ReactNode }) {
   const refreshWheels = async () => {
     setLoading(true)
     try {
-      // Get current user
-      const { data: { user: currentUser } } = await supabase.auth.getUser()
+      // Get current user session (more reliable than getUser)
+      const { data: { session } } = await supabase.auth.getSession()
 
-      if (!currentUser?.id) {
-        console.warn('Kullanıcı giriş yapmamış')
+      if (!session?.user?.id) {
+        console.warn('Kullanıcı giriş yapmamış, çarklar yüklenemiyor')
         setWheels([])
-        setLoading(false)
         return
       }
+
+      const userId = session.user.id
 
       const { data, error } = await supabase
         .from('shops')
@@ -120,7 +121,7 @@ export function CarkProvider({ children }: { children: ReactNode }) {
           *,
           widget_settings (*)
         `)
-        .eq('customer_id', currentUser.id) // SECURITY: Filter by current user
+        .eq('customer_id', userId) // SECURITY: Filter by current user
         .order('created_at', { ascending: false })
 
       if (error) throw error
@@ -154,19 +155,21 @@ export function CarkProvider({ children }: { children: ReactNode }) {
   const createWheel = async (data: CreateWheelData) => {
     setLoading(true)
     try {
-      // Get current user - SECURITY: Associate shop with authenticated user
-      const { data: { user: currentUser } } = await supabase.auth.getUser()
+      // Get current user session - SECURITY: Associate shop with authenticated user
+      const { data: { session } } = await supabase.auth.getSession()
 
-      if (!currentUser?.id) {
+      if (!session?.user?.id) {
         return { success: false, error: 'Oturum açmanız gerekiyor' }
       }
+
+      const userId = session.user.id
 
       // 1. Create shop with customer_id
       const { data: shop, error: shopError } = await supabase
         .from('shops')
         .insert({
           shop_id: data.storeId,
-          customer_id: currentUser.id, // SECURITY: Link to current user
+          customer_id: userId, // SECURITY: Link to current user
           name: data.storeName,
           logo_url: data.logoUrl,
           website_url: data.websiteUrl,
@@ -253,11 +256,13 @@ export function CarkProvider({ children }: { children: ReactNode }) {
   const updateWheel = async (id: string, data: Partial<Wheel>) => {
     setLoading(true)
     try {
-      const { data: { user: currentUser } } = await supabase.auth.getUser()
+      const { data: { session } } = await supabase.auth.getSession()
 
-      if (!currentUser?.id) {
+      if (!session?.user?.id) {
         throw new Error('Oturum açmanız gerekiyor')
       }
+
+      const userId = session.user.id
 
       const { error } = await supabase
         .from('shops')
@@ -269,7 +274,7 @@ export function CarkProvider({ children }: { children: ReactNode }) {
           active: data.active
         })
         .eq('id', id)
-        .eq('customer_id', currentUser.id) // SECURITY: Only user's own shops
+        .eq('customer_id', userId) // SECURITY: Only user's own shops
 
       if (error) throw error
       await refreshWheels()
@@ -284,17 +289,19 @@ export function CarkProvider({ children }: { children: ReactNode }) {
   const deleteWheel = async (id: string) => {
     setLoading(true)
     try {
-      const { data: { user: currentUser } } = await supabase.auth.getUser()
+      const { data: { session } } = await supabase.auth.getSession()
 
-      if (!currentUser?.id) {
+      if (!session?.user?.id) {
         throw new Error('Oturum açmanız gerekiyor')
       }
+
+      const userId = session.user.id
 
       const { error } = await supabase
         .from('shops')
         .delete()
         .eq('id', id)
-        .eq('customer_id', currentUser.id) // SECURITY: Only user's own shops
+        .eq('customer_id', userId) // SECURITY: Only user's own shops
 
       if (error) throw error
       await refreshWheels()
@@ -309,27 +316,27 @@ export function CarkProvider({ children }: { children: ReactNode }) {
   const refreshWheelSpins = async () => {
     setLoading(true)
     try {
-      // Get current user
-      const { data: { user: currentUser } } = await supabase.auth.getUser()
+      // Get current user session
+      const { data: { session } } = await supabase.auth.getSession()
 
-      if (!currentUser?.id) {
+      if (!session?.user?.id) {
         console.warn('Kullanıcı giriş yapmamış')
         setWheelSpins([])
-        setLoading(false)
         return
       }
+
+      const userId = session.user.id
 
       // Get user's shop IDs first
       const { data: userShops } = await supabase
         .from('shops')
         .select('id')
-        .eq('customer_id', currentUser.id)
+        .eq('customer_id', userId)
 
       const shopIds = userShops?.map((s: any) => s.id) || []
 
       if (shopIds.length === 0) {
         setWheelSpins([])
-        setLoading(false)
         return
       }
 
