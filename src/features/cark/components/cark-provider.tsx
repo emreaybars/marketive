@@ -276,7 +276,7 @@ export function CarkProvider({ children }: { children: ReactNode }) {
   const refreshWheelSpins = async () => {
     setLoading(true)
     try {
-      // Use wheel_spins table directly - it has all the data
+      // Use wheel_spins table with prizes join to get actual prize names
       const { data, error } = await supabase
         .from('wheel_spins')
         .select(`
@@ -287,17 +287,12 @@ export function CarkProvider({ children }: { children: ReactNode }) {
           phone,
           coupon_code,
           spin_date,
-          prize_type,
-          result
+          prize_id,
+          prize:prizes(name)
         `)
         .order('spin_date', { ascending: false })
 
-      if (error) {
-        console.error('Supabase error:', error)
-        throw error
-      }
-
-      console.log('Raw wheel_spins data:', data)
+      if (error) throw error
 
       // Transform data to match our interface
       const transformedData: WheelSpinResult[] = (data || []).map((item: any) => ({
@@ -306,12 +301,11 @@ export function CarkProvider({ children }: { children: ReactNode }) {
         full_name: item.full_name,
         email: item.email,
         phone: item.phone,
-        prize_name: item.prize_type || 'Ödül',
+        prize_name: item.prize?.name || item.prize_type || 'Bilinmeyen Ödül',
         coupon_code: item.coupon_code,
         created_at: item.spin_date
       }))
 
-      console.log('Transformed wheel spins:', transformedData)
       setWheelSpins(transformedData)
     } catch (err) {
       console.error('Error fetching wheel spins:', err)
