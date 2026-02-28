@@ -113,7 +113,25 @@ export function CarkProvider({ children }: { children: ReactNode }) {
         .order('created_at', { ascending: false })
 
       if (error) throw error
-      setWheels(data || [])
+
+      // Generate embed codes for each wheel
+      const wheelsWithEmbed = await Promise.all(
+        (data || []).map(async (wheel: any) => {
+          const token = await generateWidgetToken(wheel.shop_id, wheel.id)
+          const domain = window.location.origin
+          const embedCode = `<!-- Çarkıfelek Widget -->
+<script id="carkifelek-widget-script"
+  data-shop-token="${token}"
+  src="${domain}/widget.js">
+</script>`
+          return {
+            ...wheel,
+            embed_code: embedCode
+          }
+        })
+      )
+
+      setWheels(wheelsWithEmbed)
     } catch (err) {
       console.error('Error fetching wheels:', err)
     } finally {

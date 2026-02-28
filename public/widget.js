@@ -1,7 +1,7 @@
 /**
  * Çarkıfelek Widget - WhatsApp Green Premium Edition
  * Modern wheel with visible prize names, white modal, clean design
- * Version 5.3.0 - Faster spin (4s, 5 rotations) + debug logging
+ * Version 5.4.0 - Smoother slower spin (3s) with better easing
  */
 
 (function() {
@@ -367,7 +367,7 @@
   }
 
   function getCloseButtonStyles() {
-    return 'position: absolute; top: 16px; right: 16px;' +
+    return 'position: absolute; top: 16px; right: 16px; z-index: 10;' +
            'background: #1a1a1a; border: none; border-radius: 50%;' +
            'color: #ffffff; width: 40px; height: 40px; cursor: pointer;' +
            'display: flex; align-items: center; justify-content: center;' +
@@ -654,36 +654,20 @@
     var arcSize = (2 * Math.PI) / numPrizes;
     var prizeAngle = prizeIndex * arcSize + arcSize / 2;
 
-    // Calculate rotation to land on prize
-    var rotations = 5; // Reduced for faster spin
+    // Calculate rotation to land on prize - smoother but shorter
+    var rotations = 4;
     var targetAngle = 360 * rotations + (360 - prizeAngle * 180 / Math.PI) + 90;
-    var duration = 4000; // 4 seconds
+    var duration = 3000; // 3 seconds
     var startTime = Date.now();
-
-    // Play tick sound during spin
-    var lastTickAngle = 0;
-    var tickInterval = Math.floor(360 / numPrizes);
 
     function animate() {
       var elapsed = Date.now() - startTime;
       var progress = Math.min(elapsed / duration, 1);
 
-      // Enhanced ease out function - starts fast, slows down smoothly
-      var easeOut;
-      if (progress < 0.5) {
-        easeOut = 4 * progress * progress * progress;
-      } else {
-        easeOut = 1 - Math.pow(-2 * progress + 2, 3) / 2;
-      }
+      // Ease out cubic - smooth deceleration
+      var easeOut = 1 - Math.pow(1 - progress, 3);
 
       currentRotation = targetAngle * easeOut;
-
-      // Tick sound feedback
-      var currentAngle = currentRotation % 360;
-      if (Math.floor(currentAngle / tickInterval) > lastTickAngle) {
-        lastTickAngle = Math.floor(currentAngle / tickInterval);
-        // Optional: Add tick sound here
-      }
 
       drawWheel();
 
