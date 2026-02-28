@@ -3,6 +3,7 @@
 import { createContext, useContext, useState, useEffect, ReactNode } from 'react'
 import { createClient } from '@supabase/supabase-js'
 import { generateWidgetToken } from '@/lib/widget-token'
+import { useUser } from '@clerk/clerk-react'
 
 // Supabase client
 const supabaseUrl = import.meta.env.VITE_SUPABASE_URL || 'https://qiiygcclanmgzlrcpmle.supabase.co'
@@ -96,24 +97,29 @@ interface CarkContextType {
 const CarkContext = createContext<CarkContextType | undefined>(undefined)
 
 export function CarkProvider({ children }: { children: ReactNode }) {
+  const { user, isLoaded: isUserLoaded } = useUser()
   const [wheels, setWheels] = useState<Wheel[]>([])
   const [wheelSpins, setWheelSpins] = useState<WheelSpinResult[]>([])
   const [loading, setLoading] = useState(false)
+
+  // Get Clerk user ID for Supabase queries
+  const clerkUserId = user?.id
 
   // Fetch all wheels (shops) - SECURITY: Only user's own shops
   const refreshWheels = async () => {
     setLoading(true)
     try {
-      // Get current user session (more reliable than getUser)
-      const { data: { session } } = await supabase.auth.getSession()
+      // Wait for Clerk auth to load
+      if (!isUserLoaded) {
+        setLoading(false)
+        return
+      }
 
-      if (!session?.user?.id) {
+      if (!clerkUserId) {
         console.warn('Kullanıcı giriş yapmamış, çarklar yüklenemiyor')
         setWheels([])
         return
       }
-
-      const userId = session.user.id
 
       const { data, error } = await supabase
         .from('shops')
@@ -121,7 +127,7 @@ export function CarkProvider({ children }: { children: ReactNode }) {
           *,
           widget_settings (*)
         `)
-        .eq('customer_id', userId) // SECURITY: Filter by current user
+        .eq('customer_id', clerkUserId) // SECURITY: Filter by current Clerk user
         .order('created_at', { ascending: false })
 
       if (error) throw error
@@ -155,21 +161,17 @@ export function CarkProvider({ children }: { children: ReactNode }) {
   const createWheel = async (data: CreateWheelData) => {
     setLoading(true)
     try {
-      // Get current user session - SECURITY: Associate shop with authenticated user
-      const { data: { session } } = await supabase.auth.getSession()
-
-      if (!session?.user?.id) {
+      // SECURITY: Check if user is authenticated via Clerk
+      if (!clerkUserId) {
         return { success: false, error: 'Oturum açmanız gerekiyor' }
       }
 
-      const userId = session.user.id
-
-      // 1. Create shop with customer_id
+      // 1. Create shop with customer_id (Clerk user ID)
       const { data: shop, error: shopError } = await supabase
         .from('shops')
         .insert({
           shop_id: data.storeId,
-          customer_id: userId, // SECURITY: Link to current user
+          customer_id: clerkUserId, // SECURITY: Link to Clerk user
           name: data.storeName,
           logo_url: data.logoUrl,
           website_url: data.websiteUrl,
@@ -256,13 +258,9 @@ export function CarkProvider({ children }: { children: ReactNode }) {
   const updateWheel = async (id: string, data: Partial<Wheel>) => {
     setLoading(true)
     try {
-      const { data: { session } } = await supabase.auth.getSession()
-
-      if (!session?.user?.id) {
+      if (!clerkUserId) {
         throw new Error('Oturum açmanız gerekiyor')
       }
-
-      const userId = session.user.id
 
       const { error } = await supabase
         .from('shops')
@@ -274,7 +272,7 @@ export function CarkProvider({ children }: { children: ReactNode }) {
           active: data.active
         })
         .eq('id', id)
-        .eq('customer_id', userId) // SECURITY: Only user's own shops
+        .eq('customer_id', clerkUserId) // SECURITY: Only user's own shops
 
       if (error) throw error
       await refreshWheels()
@@ -289,19 +287,15 @@ export function CarkProvider({ children }: { children: ReactNode }) {
   const deleteWheel = async (id: string) => {
     setLoading(true)
     try {
-      const { data: { session } } = await supabase.auth.getSession()
-
-      if (!session?.user?.id) {
+      if (!clerkUserId) {
         throw new Error('Oturum açmanız gerekiyor')
       }
-
-      const userId = session.user.id
 
       const { error } = await supabase
         .from('shops')
         .delete()
         .eq('id', id)
-        .eq('customer_id', userId) // SECURITY: Only user's own shops
+        .eq('customer_id', clerkUserId) // SECURITY: Only user's own shops
 
       if (error) throw error
       await refreshWheels()
@@ -316,22 +310,18 @@ export function CarkProvider({ children }: { children: ReactNode }) {
   const refreshWheelSpins = async () => {
     setLoading(true)
     try {
-      // Get current user session
-      const { data: { session } } = await supabase.auth.getSession()
-
-      if (!session?.user?.id) {
+      // Wait for Clerk auth to load
+      if (!isUserLoaded || !clerkUserId) {
         console.warn('Kullanıcı giriş yapmamış')
         setWheelSpins([])
         return
       }
 
-      const userId = session.user.id
-
       // Get user's shop IDs first
       const { data: userShops } = await supabase
         .from('shops')
         .select('id')
-        .eq('customer_id', userId)
+        .eq('customer_id', clerkUserId)
 
       const shopIds = userShops?.map((s: any) => s.id) || []
 
@@ -378,11 +368,14 @@ export function CarkProvider({ children }: { children: ReactNode }) {
     }
   }
 
-  // Fetch on mount
+  // Fetch on mount and when user auth state changes
   useEffect(() => {
-    refreshWheels()
-    refreshWheelSpins()
-  }, [])
+    // Only fetch if Clerk auth is loaded and user is logged in
+    if (isUserLoaded && clerkUserId) {
+      refreshWheels()
+      refreshWheelSpins()
+    }
+  }, [isUserLoaded, clerkUserId])
 
   return (
     <CarkContext.Provider value={{ wheels, wheelSpins, loading, createWheel, updateWheel, deleteWheel, refreshWheels, refreshWheelSpins }}>
