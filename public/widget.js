@@ -1,7 +1,7 @@
 /**
  * Çarkıfelek Widget - WhatsApp Green Premium Edition
  * Modern wheel with visible prize names, white modal, clean design
- * Version 5.1.0 - Fixed radial text alignment and checkbox clicks
+ * Version 5.2.0 - Enhanced spinning animation with confetti and sound
  */
 
 (function() {
@@ -502,6 +502,17 @@
     // Clear canvas
     wheelContext.clearRect(0, 0, canvas.width, canvas.height);
 
+    // Add spinning glow effect
+    if (isSpinning) {
+      var glowIntensity = Math.sin(Date.now() / 100) * 0.3 + 0.7;
+      wheelContext.save();
+      wheelContext.beginPath();
+      wheelContext.arc(centerX, centerY, radius + 20, 0, 2 * Math.PI);
+      wheelContext.fillStyle = 'rgba(37, 211, 102, ' + (0.2 * glowIntensity) + ')';
+      wheelContext.fill();
+      wheelContext.restore();
+    }
+
     // Save context for rotation
     wheelContext.save();
     wheelContext.translate(centerX, centerY);
@@ -518,7 +529,7 @@
 
       wheelContext.beginPath();
       wheelContext.arc(x, y, 2.5, 0, 2 * Math.PI);
-      wheelContext.fillStyle = '#ffffff';
+      wheelContext.fillStyle = isSpinning ? '#25D366' : '#ffffff';
       wheelContext.fill();
     }
 
@@ -643,18 +654,36 @@
     var arcSize = (2 * Math.PI) / numPrizes;
     var prizeAngle = prizeIndex * arcSize + arcSize / 2;
 
-    // Calculate rotation to land on prize
-    var targetAngle = 360 * 6 + (360 - prizeAngle * 180 / Math.PI) + 90;
-    var duration = 5000;
+    // Calculate rotation to land on prize - more rotations for excitement
+    var rotations = 8; // Increase from 6 to 8
+    var targetAngle = 360 * rotations + (360 - prizeAngle * 180 / Math.PI) + 90;
+    var duration = 6000; // Increase from 5000 to 6000ms
     var startTime = Date.now();
+
+    // Play tick sound during spin
+    var lastTickAngle = 0;
+    var tickInterval = Math.floor(360 / numPrizes);
 
     function animate() {
       var elapsed = Date.now() - startTime;
       var progress = Math.min(elapsed / duration, 1);
 
-      // Ease out quart
-      var easeOut = 1 - Math.pow(1 - progress, 4);
+      // Enhanced ease out function - starts fast, slows down smoothly
+      var easeOut;
+      if (progress < 0.5) {
+        easeOut = 4 * progress * progress * progress;
+      } else {
+        easeOut = 1 - Math.pow(-2 * progress + 2, 3) / 2;
+      }
+
       currentRotation = targetAngle * easeOut;
+
+      // Tick sound feedback
+      var currentAngle = currentRotation % 360;
+      if (Math.floor(currentAngle / tickInterval) > lastTickAngle) {
+        lastTickAngle = Math.floor(currentAngle / tickInterval);
+        // Optional: Add tick sound here
+      }
 
       drawWheel();
 
@@ -662,11 +691,66 @@
         requestAnimationFrame(animate);
       } else {
         isSpinning = false;
+        triggerConfetti();
         showSuccess(prize, fullName, contact);
       }
     }
 
     animate();
+  }
+
+  // Confetti effect function
+  function triggerConfetti() {
+    var colors = ['#25D366', '#128C7E', '#FFD700', '#FF6B6B', '#4ECDC4', '#45B7D1'];
+    var confettiCount = 100;
+    var container = document.getElementById('carkifelek-modal');
+
+    if (!container) return;
+
+    for (var i = 0; i < confettiCount; i++) {
+      createConfetti(container, colors);
+    }
+  }
+
+  function createConfetti(container, colors) {
+    var confetti = document.createElement('div');
+    var color = colors[Math.floor(Math.random() * colors.length)];
+    var startX = Math.random() * 100;
+    var endX = startX + (Math.random() - 0.5) * 100;
+    var rotation = Math.random() * 720;
+    var duration = 2000 + Math.random() * 1000;
+    var size = 5 + Math.random() * 10;
+
+    confetti.style.cssText =
+      'position: absolute;' +
+      'left: ' + startX + '%;' +
+      'top: 50%;' +
+      'width: ' + size + 'px;' +
+      'height: ' + size + 'px;' +
+      'background: ' + color + ';' +
+      'border-radius: 2px;' +
+      'opacity: 1;' +
+      'transform: rotate(0deg);' +
+      'transition: all ' + duration + 'ms cubic-bezier(0.25, 0.46, 0.45, 0.94);' +
+      'pointer-events: none;' +
+      'z-index: 10000;';
+
+    container.appendChild(confetti);
+
+    // Trigger animation
+    setTimeout(function() {
+      confetti.style.left = endX + '%';
+      confetti.style.top = '120%';
+      confetti.style.transform = 'rotate(' + rotation + 'deg)';
+      confetti.style.opacity = '0';
+    }, 10);
+
+    // Remove from DOM
+    setTimeout(function() {
+      if (confetti.parentNode) {
+        confetti.parentNode.removeChild(confetti);
+      }
+    }, duration);
   }
 
   function showResult(message, color) {
@@ -690,23 +774,53 @@
     var prizeNameEl = document.getElementById('carkifelek-prize-name');
     var couponEl = document.getElementById('carkifelek-coupon');
 
+    // Hide form and result
     if (formEl) formEl.style.display = 'none';
     if (resultEl) resultEl.style.display = 'none';
+
+    // Show success with animation
     if (successEl) {
       successEl.style.display = 'block';
+      successEl.style.opacity = '0';
+      successEl.style.transform = 'scale(0.8)';
+
+      setTimeout(function() {
+        successEl.style.transition = 'all 0.5s cubic-bezier(0.34, 1.56, 0.64, 1)';
+        successEl.style.opacity = '1';
+        successEl.style.transform = 'scale(1)';
+      }, 50);
     }
 
+    // Animate prize name
     if (prizeNameEl) {
       prizeNameEl.textContent = prize.name;
+      prizeNameEl.style.opacity = '0';
+      prizeNameEl.style.transform = 'translateY(20px)';
+
+      setTimeout(function() {
+        prizeNameEl.style.transition = 'all 0.4s ease-out';
+        prizeNameEl.style.opacity = '1';
+        prizeNameEl.style.transform = 'translateY(0)';
+      }, 300);
     }
 
+    // Show coupon code with animation
     if (couponEl && prize.coupon_codes) {
       couponEl.textContent = '🎟️ KOD: ' + prize.coupon_codes;
       couponEl.style.display = 'block';
+      couponEl.style.opacity = '0';
+      couponEl.style.transform = 'scale(0.9)';
+
+      setTimeout(function() {
+        couponEl.style.transition = 'all 0.3s ease-out';
+        couponEl.style.opacity = '1';
+        couponEl.style.transform = 'scale(1)';
+      }, 500);
     } else {
-      couponEl.style.display = 'none';
+      if (couponEl) couponEl.style.display = 'none';
     }
 
+    // Log to database
     logSpin(prize.id, fullName, contact);
   }
 

@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useRef } from 'react'
+import { useState } from 'react'
 import { Button } from '@/components/ui/button'
 import {
   Sheet,
@@ -17,7 +17,6 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { Separator } from '@/components/ui/separator'
 import { X, Plus, Sparkles, Store, Settings, Gift, Copy, Wand2, Upload } from 'lucide-react'
 import { useCark } from './cark-provider'
-import { WheelOfFortune, type WheelOfFortuneRef } from '@matmachry/react-wheel-of-fortune'
 
 // Ödül tipi
 interface Prize {
@@ -120,35 +119,6 @@ function ColorPickerInput({
   )
 }
 
-// Custom Spin Button component
-type SpinButtonProps = React.ComponentProps<"button">
-function SpinButton({ onClick, disabled }: SpinButtonProps) {
-  return (
-    <button
-      onClick={onClick}
-      disabled={disabled}
-      className="relative w-16 h-16 sm:w-20 sm:h-20 rounded-full bg-gradient-to-br from-green-400 via-green-500 to-green-600 shadow-lg transform transition-all duration-200 hover:scale-110 active:scale-95 group cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:scale-100"
-    >
-      <div className="absolute inset-0 rounded-full bg-gradient-to-br from-green-300 to-green-400 animate-pulse opacity-60"></div>
-      <div className="relative w-full h-full rounded-full bg-gradient-to-br from-green-400 via-green-500 to-green-600 border-3 border-white shadow-inner flex items-center justify-center">
-        <div className="text-center">
-          <div className="text-white font-bold text-sm sm:text-base tracking-wider drop-shadow-lg">ÇEVİR</div>
-        </div>
-        <div className="absolute inset-0 rounded-full border-2 border-dashed border-green-200 opacity-50 group-hover:animate-spin"></div>
-      </div>
-    </button>
-  )
-}
-
-// Custom Pointer component
-function PointerIcon(props: React.SVGProps<SVGSVGElement>) {
-  return (
-    <svg xmlns="http://www.w3.org/2000/svg" width="1em" height="1em" viewBox="0 0 24 24" {...props}>
-      <path fill="currentColor" fillRule="evenodd" d="M20.05 17.65a3 3 0 0 0 1.2-2.4v-11a3 3 0 0 0-3-3h-12a3 3 0 0 0-3 3v11a3 3 0 0 0 1.2 2.4l6 4.5a3 3 0 0 0 3.6 0z" clipRule="evenodd" />
-    </svg>
-  )
-}
-
 const initialFormData: WheelFormData = {
   // Mağaza Bilgileri
   storeId: '',
@@ -180,9 +150,6 @@ export function CarkCreateDrawer() {
   const { createWheel } = useCark()
   const [logoPreview, setLogoPreview] = useState<string | null>(null)
   const [embedCode, setEmbedCode] = useState<string>('')
-  const wheelRef = useRef<WheelOfFortuneRef>(null)
-  const [winnerKey, setWinnerKey] = useState<string>('')
-  const [isSpinning, setIsSpinning] = useState(false)
 
   const [formData, setFormData] = useState<WheelFormData>(initialFormData)
 
@@ -582,23 +549,20 @@ export function CarkCreateDrawer() {
             </TabsContent>
 
             {/* Ödüller */}
-            <TabsContent value="prizes" className="mt-3">
-              <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-                {/* Sol Taraf - Formlar */}
-                <div className="space-y-4">
-                  <div>
-                    <div className="text-xs sm:text-sm font-medium text-muted-foreground">
-                      Ödüller
-                    </div>
-                    <p className="text-xs text-muted-foreground mt-1">
-                      En az 3, en fazla 12 ödül ekleyebilirsiniz. Toplam şans %100 olmalıdır.
-                    </p>
-                  </div>
+            <TabsContent value="prizes" className="space-y-4 sm:space-y-5 mt-3">
+              <div>
+                <div className="text-xs sm:text-sm font-medium text-muted-foreground">
+                  Ödüller
+                </div>
+                <p className="text-xs text-muted-foreground mt-1">
+                  En az 3, en fazla 12 ödül ekleyebilirsiniz. Çarkta eşit aralıklarla gösterilecektir.
+                </p>
+              </div>
 
-                  <Separator />
+              <Separator />
 
-                  {/* Boş durum */}
-                  {formData.prizes.length === 0 ? (
+              {/* Boş durum */}
+              {formData.prizes.length === 0 ? (
                 <div className="flex flex-col items-center justify-center py-16 sm:py-20 text-center">
                   {/* Çark Görseli */}
                   <div className="relative mb-6">
@@ -797,79 +761,8 @@ export function CarkCreateDrawer() {
                     Yeni Ödül Ekle
                   </Button>
                 )}
-                </div>
-                )}
-                </div>
-
-                {/* Sağ Taraf - Canlı Çark Önizleme */}
-                {formData.prizes.length >= 3 && (
-                  <div className="flex flex-col items-center">
-                    <div className="text-xs sm:text-sm font-medium text-muted-foreground mb-4">
-                      Canlı Önizleme
-                    </div>
-
-                    {/* Wheel Preview */}
-                    <div className="relative flex items-center justify-center p-4 bg-gradient-to-br from-muted/50 to-muted/20 rounded-2xl border">
-                      <WheelOfFortune
-                        ref={wheelRef}
-                        prizes={formData.prizes.map((p) => ({
-                          key: p.id,
-                          color: p.color as `#${string}`,
-                          prize: (
-                            <div className="flex flex-col items-center gap-1">
-                              <Gift className="size-6" />
-                              <span className="font-bold text-xs leading-tight">{p.name || 'Ödül'}</span>
-                            </div>
-                          ),
-                          probability: p.chance / 100
-                        }))}
-                        wheelPointer={
-                          <PointerIcon
-                            style={{ filter: 'drop-shadow(2px 2px 2px rgba(0, 0, 0, 0.3))' }}
-                            className="text-white size-10"
-                          />
-                        }
-                        wheelSpinButton={
-                          <SpinButton
-                            onClick={() => {
-                              setIsSpinning(true)
-                              wheelRef.current?.spin()
-                            }}
-                            disabled={isSpinning}
-                          />
-                        }
-                        onSpinStart={() => {
-                          setWinnerKey('')
-                        }}
-                        onSpinEnd={(prize) => {
-                          setWinnerKey(prize.key)
-                          setIsSpinning(false)
-                        }}
-                        animationDurationInMs={4000}
-                        useProbabilitiesToCalculateWinner={true}
-                        className="max-w-full"
-                      />
-                    </div>
-
-                    {/* Kazanan Sonuç */}
-                    {winnerKey && (
-                      <div className="mt-4 p-3 bg-green-50 dark:bg-green-950/20 rounded-lg border border-green-200 dark:border-green-900 animate-in fade-in slide-in-from-bottom-2">
-                        <p className="text-sm font-medium text-green-700 dark:text-green-400">
-                          🎉 Kazanan Ödül: {formData.prizes.find(p => p.id === winnerKey)?.name || 'Ödül'}
-                        </p>
-                      </div>
-                    )}
-
-                    {/* Toplam Şans Göstergesi */}
-                    <div className="mt-4 text-xs text-muted-foreground">
-                      Toplam Şans: <span className={totalChance === 100 ? 'text-green-600 font-semibold' : 'text-amber-600 font-semibold'}>
-                        {totalChance}%
-                      </span>
-                      {totalChance !== 100 && ' (toplam %100 olmalı)'}
-                    </div>
-                  </div>
-                )}
               </div>
+              )}
             </TabsContent>
 
             {/* Başarılı - Embed Kodu */}
