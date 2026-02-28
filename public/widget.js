@@ -183,18 +183,19 @@
   }
 
   function trackWidgetView() {
-    if (!shopUuid) return;
+    if (!shopUuid || !supabaseClient) return;
 
-    supabaseClient
-      .rpc('track_widget_view', {
-        p_shop_uuid: shopUuid,
-        p_ip_address: null,
-        p_user_agent: navigator.userAgent,
-        p_referrer: document.referrer
-      })
-      .catch(function(err) {
-        logError('Track view error', err);
-      });
+    // Fire and forget - no need to wait
+    supabaseClient.rpc('track_widget_view', {
+      p_shop_uuid: shopUuid,
+      p_ip_address: null,
+      p_user_agent: navigator.userAgent,
+      p_referrer: document.referrer
+    }).then(function() {
+      // Success - silently ignore
+    }).catch(function(err) {
+      logError('Track view error', err);
+    });
   }
 
   // ============================================
