@@ -1,5 +1,5 @@
 // Supabase Edge Function: Get Widget Data
-// Replaces: api.php?action=get_widget_data&shop_id={shopId}
+// Token-based authentication for secure widget access
 
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts"
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2"
@@ -10,14 +10,31 @@ const corsHeaders = {
   'Access-Control-Allow-Methods': 'GET, POST, OPTIONS',
 }
 
-// Helper to verify API key
-function isValidApiKey(req: Request): boolean {
-  const apiKey = req.headers.get('apikey')
-  const authHeader = req.headers.get('authorization')
+const widgetSecret = Deno.env.get('WIDGET_SECRET') || 'default-secret'
 
-  // Allow requests with valid anon key or service role key
-  // For development: also allow empty apikey (you may want to restrict this in production)
-  return !!apiKey || !!authHeader
+// Verify shop token
+function verifyShopToken(token: string): { shopId: string; shopUuid: string } | null {
+  try {
+    // Base64url decode
+    const payload = JSON.parse(atob(token))
+    const { sig, ...data } = payload
+
+    // Verify signature
+    const payloadStr = JSON.stringify(data)
+    const textEncoder = new TextEncoder()
+    const key = textEncoder.encode(payloadStr + widgetSecret)
+    const keyHash = await crypto.subtle.digest('SHA-256', key)
+    const keyArray = Array.from(new Uint8Array(keyHash))
+    const expectedSig = keyArray.map(b => b.toString(16).padStart(2, '0')).join('')
+
+    if (sig !== expectedSig) {
+      return null
+    }
+
+    return { shopId: data.sid, shopUuid: data.uid }
+  } catch {
+    return null
+  }
 }
 
 serve(async (req) => {
@@ -26,24 +43,22 @@ serve(async (req) => {
     return new Response('ok', { headers: corsHeaders })
   }
 
-  // Check API key (for public widget access)
-  if (!isValidApiKey(req)) {
-    return new Response(
-      JSON.stringify({ error: 'API key required' }),
-      { status: 401, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-    )
-  }
-
   try {
     const url = new URL(req.url)
-    const shopId = url.searchParams.get('shop_id')
-    const direct = url.searchParams.get('direct')
-    const referrer = req.headers.get('referer') || ''
+    const token = url.searchParams.get('token')
 
-    if (!shopId) {
+    if (!token) {
       return new Response(
-        JSON.stringify({ error: 'Mağaza ID parametresi gerekli' }),
+        JSON.stringify({ error: 'Token required' }),
         { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      )
+    }
+
+    const shopAuth = verifyShopToken(token)
+    if (!shopAuth) {
+      return new Response(
+        JSON.stringify({ error: 'Invalid token' }),
+        { status: 401, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       )
     }
 
@@ -52,11 +67,11 @@ serve(async (req) => {
     const supabaseKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!
     const supabase = createClient(supabaseUrl, supabaseKey)
 
-    // Get shop info
+    // Get shop info by UUID
     const { data: shop, error: shopError } = await supabase
       .from('shops')
       .select('*')
-      .eq('shop_id', shopId)
+      .eq('id', shopAuth.shopUuid)
       .single()
 
     if (shopError || !shop) {
@@ -66,29 +81,8 @@ serve(async (req) => {
       )
     }
 
-    // Domain validation (skip if direct=1)
-    if (direct !== '1' && shop.allowed_domains) {
-      const allowedDomains = JSON.parse(shop.allowed_domains || '[]')
-      if (allowedDomains.length > 0) {
-        let referrerDomain = ''
-        try {
-          const refUrl = new URL(referrer)
-          referrerDomain = refUrl.hostname.toLowerCase()
-        } catch {
-          // Invalid referrer, continue
-        }
-
-        if (referrerDomain && !allowedDomains.includes(referrerDomain)) {
-          return new Response(
-            JSON.stringify({ error: 'Bu alan adından erişim yetkisi bulunmuyor' }),
-            { status: 403, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-          )
-        }
-      }
-    }
-
     // Get widget settings
-    const { data: widgetSettings, error: widgetError } = await supabase
+    const { data: widgetSettings } = await supabase
       .from('widget_settings')
       .select('*')
       .eq('shop_id', shop.id)
@@ -99,7 +93,9 @@ serve(async (req) => {
       description: 'Hediyeni almak için hemen çarkı çevir.',
       button_text: 'ÇARKI ÇEVİR',
       show_on_load: true,
-      popup_delay: 2000
+      popup_delay: 2000,
+      title_color: '#ffffff',
+      description_color: '#ffffff'
     }
 
     // Get active prizes
@@ -139,7 +135,8 @@ serve(async (req) => {
         name: shop.name,
         logo: shop.logo_url,
         url: shop.website_url,
-        brandName: shop.brand_name
+        brandName: shop.brand_name,
+        contactInfoType: shop.contact_info_type || 'email'
       },
       widget: {
         title: widget.title,

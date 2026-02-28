@@ -179,12 +179,12 @@ export function CarkProvider({ children }: { children: ReactNode }) {
       if (prizesError) throw prizesError
 
       // 4. Generate embed code
-      const widgetUrl = import.meta.env.VITE_WIDGET_URL || 'https://marketive-production.up.railway.app'
+      const widgetBaseUrl = import.meta.env.VITE_WIDGET_URL || window.location.origin
       const token = await generateWidgetToken(data.storeId, shop.id)
       const embedCode = `<!-- Çarkıfelek Widget -->
 <script id="carkifelek-widget-script"
   data-shop-token="${token}"
-  src="${widgetUrl}/widget.js">
+  src="${widgetBaseUrl}/widget.js">
 </script>`
 
       // 5. Refresh list

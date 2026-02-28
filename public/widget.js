@@ -10,7 +10,7 @@
   // Configuration
   const CONFIG = {
     shopToken: '',
-    apiBaseUrl: 'https://marketive-production.up.railway.app', // Railway API URL
+    apiBaseUrl: 'https://qiiygcclanmgzlrcpmle.supabase.co/functions/v1', // Supabase Edge Functions
   };
 
   // State
@@ -72,7 +72,7 @@
 
     try {
       const response = await fetch(
-        `${CONFIG.apiBaseUrl}/api/widget/data?token=${encodeURIComponent(CONFIG.shopToken)}`,
+        `${CONFIG.apiBaseUrl}/widget-data?token=${encodeURIComponent(CONFIG.shopToken)}`,
         {
           method: 'GET',
           headers: { 'Content-Type': 'application/json' }
@@ -100,7 +100,7 @@
     if (!widgetData || !email) return false;
 
     try {
-      const response = await fetch(`${CONFIG.apiBaseUrl}/api/widget/check-email`, {
+      const response = await fetch(`${CONFIG.apiBaseUrl}/check-email`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -124,7 +124,7 @@
     const sessionId = getSessionId();
 
     try {
-      await fetch(`${CONFIG.apiBaseUrl}/api/widget/log-spin`, {
+      await fetch(`${CONFIG.apiBaseUrl}/log-spin`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -150,7 +150,7 @@
     const sessionId = getSessionId();
 
     try {
-      await fetch(`${CONFIG.apiBaseUrl}/api/widget/view`, {
+      await fetch(`${CONFIG.apiBaseUrl}/view`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
