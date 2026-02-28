@@ -178,13 +178,12 @@ export function CarkProvider({ children }: { children: ReactNode }) {
 
       if (prizesError) throw prizesError
 
-      // 4. Generate embed code
-      const widgetBaseUrl = import.meta.env.VITE_WIDGET_URL || window.location.origin
+      // 4. Generate embed code (widget ve admin aynı domain'de)
       const token = await generateWidgetToken(data.storeId, shop.id)
       const embedCode = `<!-- Çarkıfelek Widget -->
 <script id="carkifelek-widget-script"
   data-shop-token="${token}"
-  src="${widgetBaseUrl}/widget.js">
+  src="${window.location.origin}/widget.js">
 </script>`
 
       // 5. Refresh list
