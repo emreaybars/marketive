@@ -264,54 +264,34 @@
 
     log('Kaydediliyor:', prize.id, fullName, contact);
 
-    var contactType = widgetData.shop.contactInfoType;
-    var spinData = {
-      shop_id: shopUuid,
-      full_name: fullName,
-      created_at: new Date().toISOString()
-    };
+    // Widget token'ı al
+    var widgetScript = document.getElementById('carkifelek-widget-script');
+    var shopToken = widgetScript ? widgetScript.getAttribute('data-shop-token') : null;
 
-    if (contactType === 'email') {
-      spinData.email = contact;
-    } else {
-      spinData.phone = contact;
+    if (!shopToken) {
+      logError('Shop token bulunamadı');
+      return;
     }
 
-    // Önce wheel_spins tablosuna kaydet
+    // Güvenli RPC fonksiyonunu kullan
     supabaseClient
-      .from('wheel_spins')
-      .insert(spinData)
-      .select()
-      .single()
+      .rpc('widget_log_spin', {
+        p_token: shopToken,
+        p_contact: contact,
+        p_prize_id: prize.id,
+        p_full_name: fullName,
+        p_ip_address: null,
+        p_user_agent: navigator.userAgent
+      })
       .then(function(result) {
         if (result.error) {
           logError('Spin kayıt hatası', result.error);
           return;
         }
+        log('Kayıt başarılı - Spin ID:', result.data.spin_id, 'Coupon:', result.data.coupon_code);
 
-        var spinId = result.data.id;
-
-        // Coupon kodu oluştur
-        var couponCode = null;
-        if (prize.coupon_codes && prize.coupon_codes.trim() !== '') {
-          couponCode = prize.coupon_codes.split('\n')[0].trim();
-        } else {
-          couponCode = Math.random().toString(36).substring(2, 10).toUpperCase();
-        }
-
-        // Sonra wheel_wins tablosuna kaydet
-        return supabaseClient
-          .from('wheel_wins')
-          .insert({
-            spin_id: spinId,
-            prize_id: prize.id,
-            shop_id: shopUuid,
-            coupon_code: couponCode,
-            created_at: new Date().toISOString()
-          })
-          .then(function() {
-            log('Kayıt başarılı - Spin ID:', spinId, 'Coupon:', couponCode);
-          });
+        // Prize nesnesine coupon kodunu ekle (modal gösterimi için)
+        prize.coupon_code_result = result.data.coupon_code;
       })
       .catch(function(err) {
         logError('Kayıt hatası', err);
