@@ -68,7 +68,7 @@ export async function generateWidgetEmbedCode(
 </script>`
 }
 
-export function generateWidgetEmbedCodeSync(shopId: string, shopUuid: string, token: string, domain: string): string {
+export function generateWidgetEmbedCodeSync(_shopId: string, shopUuid: string, token: string, domain: string): string {
   const supabaseUrl = import.meta.env.VITE_SUPABASE_URL
   const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY
 
