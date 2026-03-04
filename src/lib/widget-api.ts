@@ -5,7 +5,7 @@
  */
 
 import { createClient } from '@supabase/supabase-js';
-import { createHmac, timingSafeEqual } from 'crypto';
+import { createHmac } from 'crypto';
 
 const supabase = createClient(
   import.meta.env.VITE_SUPABASE_URL || '',
@@ -19,8 +19,8 @@ if (!WIDGET_SECRET) {
 }
 
 export interface ShopTokenPayload {
-  shop_id: string;  // The public shop_id (VARCHAR)
-  shop_uuid: string; // The internal UUID
+  sid: string;      // The public shop_id (VARCHAR)
+  uid: string;      // The internal UUID
   ts: number;
   sig: string;      // HMAC signature
 }
