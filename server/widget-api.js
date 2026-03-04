@@ -1,7 +1,7 @@
 /**
  * Widget API Server
  * Secure API endpoints for the Çarkıfelek widget
- * This server acts as a proxy, keeping Supabase credentials secure
+ * GÜVENLİK: Rate limiting, security headers, CSRF koruması eklendi
  */
 
 const express = require('express');
@@ -23,12 +23,156 @@ if (!supabaseUrl || !supabaseServiceKey) {
 
 const supabase = createClient(supabaseUrl, supabaseServiceKey);
 
+// ============================================
+// GÜVENLİK: Rate Limiting Middleware
+// ============================================
+const rateLimit = require('express-rate-limit');
+
+// IP başına rate limit
+const ipLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000, // 15 dakika
+  max: 100, // IP başına 100 istek
+  message: { error: 'Too many requests, please try again later' },
+  standardHeaders: true,
+  legacyHeaders: false,
+  // GÜVENLİK: Gerçek IP'yi al (proxy arkasında çalışıyorsa)
+  keyGenerator: (req) => {
+    return req.headers['x-forwarded-for']?.split(',')[0] || req.ip;
+  }
+});
+
+// POST endpoint'leri için sıkı rate limit
+const postLimiter = rateLimit({
+  windowMs: 60 * 60 * 1000, // 1 saat
+  max: 10, // IP başına 10 POST isteği
+  message: { error: 'Too many submissions, please try again later' },
+  standardHeaders: true,
+  legacyHeaders: false,
+  skipSuccessfulRequests: false
+});
+
+// Email başına rate limit (spin için)
+const spinLimiter = rateLimit({
+  windowMs: 24 * 60 * 60 * 1000, // 24 saat
+  max: 3, // Email başına 3 spin
+  message: { error: 'Daily spin limit reached' },
+  standardHeaders: true,
+  legacyHeaders: false,
+  keyGenerator: (req) => {
+    const email = req.body.email || '';
+    const token = req.body.token || '';
+    return `${token}-${email.toLowerCase()}`;
+  }
+});
+
+// ============================================
+// GÜVENLİK: Security Headers Middleware
+// ============================================
+app.use((req, res, next) => {
+  // Content Security Policy
+  res.setHeader('Content-Security-Policy',
+    "default-src 'self'; " +
+    "script-src 'self' 'unsafe-inline' https://cdn.jsdelivr.net; " +
+    "style-src 'self' 'unsafe-inline'; " +
+    "img-src 'self' https: data:; " +
+    "font-src 'self' data:; " +
+    "connect-src 'self' https://*.supabase.co; " +
+    "frame-ancestors 'none';"
+  );
+
+  // Strict-Transport-Security (1 yıl)
+  res.setHeader('Strict-Transport-Security', 'max-age=31536000; includeSubDomains');
+
+  // X-Content-Type-Options
+  res.setHeader('X-Content-Type-Options', 'nosniff');
+
+  // X-Frame-Options
+  res.setHeader('X-Frame-Options', 'DENY');
+
+  // X-XSS-Protection
+  res.setHeader('X-XSS-Protection', '1; mode=block');
+
+  // Referrer-Policy
+  res.setHeader('Referrer-Policy', 'strict-origin-when-cross-origin');
+
+  // Permissions-Policy
+  res.setHeader('Permissions-Policy',
+    'geolocation=(), ' +
+    'microphone=(), ' +
+    'camera=(), ' +
+    'payment=()'
+  );
+
+  // Remove X-Powered-By header
+  res.removeHeader('X-Powered-By');
+
+  next();
+});
+
+// ============================================
+// GÜVENLİK: CSRF Token Middleware
+// ============================================
+const csrfTokens = new Map();
+
+function generateCsrfToken() {
+  return crypto.randomBytes(32).toString('hex');
+}
+
+function csrfProtection(req, res, next) {
+  // GET istekleri için CSRF gerekli değil
+  if (req.method === 'GET') {
+    return next();
+  }
+
+  const token = req.headers['x-csrf-token'];
+  const sessionToken = req.headers['x-session-token'];
+
+  if (!token || !sessionToken) {
+    return res.status(403).json({ error: 'CSRF token missing' });
+  }
+
+  const validToken = csrfTokens.get(sessionToken);
+  if (!validToken || validToken !== token) {
+    return res.status(403).json({ error: 'Invalid CSRF token' });
+  }
+
+  // Token'ı kullan ve yenisi oluştur
+  csrfTokens.delete(sessionToken);
+  const newToken = generateCsrfToken();
+  csrfTokens.set(sessionToken, newToken);
+  res.setHeader('X-CSRF-Token', newToken);
+
+  next();
+}
+
 // Middleware
-app.use(cors());
-app.use(express.json());
+app.use(cors({
+  origin: process.env.ALLOWED_ORIGINS?.split(',') || '*',
+  credentials: true
+}));
+app.use(express.json({ limit: '10kb' })); // Payload limit
+app.use(ipLimiter); // IP rate limit
 
 // Serve static files (widget.js)
-app.use(express.static(path.join(__dirname, '../public')));
+app.use(express.static(path.join(__dirname, '../public'), {
+  maxAge: '1h', // Cache 1 saat
+  etag: true
+}));
+
+// ============================================
+// GÜVENLİK: CSRF Token Endpoint
+// ============================================
+app.get('/api/widget/csrf-token', (req, res) => {
+  const sessionToken = req.headers['x-session-token'] || crypto.randomBytes(16).toString('hex');
+  const csrfToken = generateCsrfToken();
+
+  csrfTokens.set(sessionToken, csrfToken);
+
+  res.json({
+    csrfToken,
+    sessionToken
+  });
+});
 
 // Cache for shop token validation (5 minute TTL)
 const tokenCache = new Map();
@@ -105,13 +249,31 @@ function verifyShopToken(token) {
 }
 
 /**
+ * GÜVENLİK: Input sanitization
+ */
+function sanitizeInput(input) {
+  if (typeof input !== 'string') return input;
+  return input
+    .replace(/[<>]/g, '')
+    .trim()
+    .substring(0, 500); // Max length
+}
+
+function sanitizeEmail(email) {
+  if (!email || typeof email !== 'string') return null;
+  const sanitized = email.toLowerCase().trim().substring(0, 254);
+  // Basic email validation
+  if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(sanitized)) return null;
+  return sanitized;
+}
+
+/**
  * GET /api/widget/data?token={shopToken}
  * Get widget configuration, shop info, and prizes
  */
 app.get('/api/widget/data', async (req, res) => {
   try {
-    const token = req.query.token;
-    const referrer = req.headers.referer || '';
+    const token = sanitizeInput(req.query.token);
 
     if (!token) {
       return res.status(400).json({ error: 'Token required' });
@@ -141,7 +303,7 @@ app.get('/api/widget/data', async (req, res) => {
       .single();
 
     const widget = widgetSettings || {
-      title: 'Çarkı Çevir<br>Hediyeni Kazan!',
+      title: 'Çarkı Çevir Hediyeni Kazan!',
       description: 'Hediyeni almak için hemen çarkı çevir.',
       button_text: 'ÇARKI ÇEVİR',
       show_on_load: true,
@@ -165,9 +327,9 @@ app.get('/api/widget/data', async (req, res) => {
     // Format prizes
     const formattedPrizes = prizes.map(prize => ({
       id: prize.id,
-      name: prize.name,
-      description: prize.description,
-      coupons: prize.coupon_codes ? prize.coupon_codes.split('\n').filter(c => c.trim()) : [],
+      name: sanitizeInput(prize.name),
+      description: prize.description ? sanitizeInput(prize.description) : null,
+      coupons: prize.coupon_codes ? prize.coupon_codes.split('\n').filter(c => c.trim()).slice(0, 100) : [],
       url: prize.redirect_url,
       color: prize.color,
       chance: prize.chance
@@ -175,16 +337,16 @@ app.get('/api/widget/data', async (req, res) => {
 
     res.json({
       shop: {
-        name: shop.name,
+        name: sanitizeInput(shop.name),
         logo: shop.logo_url,
         url: shop.website_url,
-        brandName: shop.brand_name,
+        brandName: sanitizeInput(shop.brand_name),
         contactInfoType: shop.contact_info_type || 'email'
       },
       widget: {
-        title: widget.title,
-        description: widget.description,
-        buttonText: widget.button_text,
+        title: sanitizeInput(widget.title),
+        description: sanitizeInput(widget.description),
+        buttonText: sanitizeInput(widget.button_text),
         showOnLoad: widget.show_on_load,
         popupDelay: widget.popup_delay,
         backgroundColor: widget.background_color,
@@ -205,13 +367,13 @@ app.get('/api/widget/data', async (req, res) => {
  * POST /api/widget/check-email
  * Check if email has already won
  */
-app.post('/api/widget/check-email', async (req, res) => {
+app.post('/api/widget/check-email', postLimiter, async (req, res) => {
   try {
-    const token = req.body.token;
-    const { email } = req.body;
+    const token = sanitizeInput(req.body.token);
+    const email = sanitizeEmail(req.body.email);
 
     if (!token || !email) {
-      return res.status(400).json({ error: 'Token and email required' });
+      return res.status(400).json({ error: 'Token and valid email required' });
     }
 
     const shopAuth = verifyShopToken(token);
@@ -223,7 +385,7 @@ app.post('/api/widget/check-email', async (req, res) => {
       .from('won_prizes')
       .select('id')
       .eq('shop_id', shopAuth.shopUuid)
-      .eq('email', email.toLowerCase())
+      .eq('email', email)
       .limit(1);
 
     const exists = existingPrize && existingPrize.length > 0;
@@ -240,10 +402,12 @@ app.post('/api/widget/check-email', async (req, res) => {
  * POST /api/widget/log-spin
  * Log a winning spin
  */
-app.post('/api/widget/log-spin', async (req, res) => {
+app.post('/api/widget/log-spin', spinLimiter, async (req, res) => {
   try {
-    const token = req.body.token;
-    const { prize_id, email, session_id } = req.body;
+    const token = sanitizeInput(req.body.token);
+    const prize_id = sanitizeInput(req.body.prize_id);
+    const email = req.body.email ? sanitizeEmail(req.body.email) : null;
+    const session_id = req.body.session_id ? sanitizeInput(req.body.session_id) : null;
 
     if (!token || !prize_id) {
       return res.status(400).json({ error: 'Token and prize_id required' });
@@ -267,7 +431,7 @@ app.post('/api/widget/log-spin', async (req, res) => {
     }
 
     // Get coupon code
-    let couponCode = req.body.coupon_code;
+    let couponCode = req.body.coupon_code ? sanitizeInput(req.body.coupon_code) : null;
     if (!couponCode && prize.coupon_codes) {
       const codes = prize.coupon_codes.split('\n').filter(c => c.trim());
       couponCode = codes[0] || null;
@@ -279,7 +443,7 @@ app.post('/api/widget/log-spin', async (req, res) => {
       .insert({
         shop_id: shopAuth.shopUuid,
         prize_id: prize.id,
-        email: email?.toLowerCase(),
+        email: email,
         coupon_code: couponCode
       })
       .select()
@@ -295,14 +459,14 @@ app.post('/api/widget/log-spin', async (req, res) => {
       .from('wheel_spins')
       .insert({
         shop_id: shopAuth.shopUuid,
-        email: email?.toLowerCase(),
+        email: email,
         result: prize.name,
         prize_type: prize.name,
         prize_value: couponCode,
         coupon_code: couponCode,
         ip_address: req.ip,
-        user_agent: req.headers['user-agent'],
-        session_id: session_id || null
+        user_agent: req.headers['user-agent']?.substring(0, 500) || null,
+        session_id: session_id
       });
 
     res.json({
@@ -321,9 +485,9 @@ app.post('/api/widget/log-spin', async (req, res) => {
  * POST /api/widget/view
  * Track widget view (optional, for analytics)
  */
-app.post('/api/widget/view', async (req, res) => {
+app.post('/api/widget/view', postLimiter, async (req, res) => {
   try {
-    const token = req.body.token;
+    const token = sanitizeInput(req.body.token);
 
     if (!token) {
       return res.status(400).json({ error: 'Token required' });
@@ -338,10 +502,10 @@ app.post('/api/widget/view', async (req, res) => {
       .from('widget_views')
       .insert({
         shop_id: shopAuth.shopUuid,
-        session_id: req.body.session_id || null,
+        session_id: req.body.session_id ? sanitizeInput(req.body.session_id) : null,
         ip_address: req.ip,
-        user_agent: req.headers['user-agent'],
-        referrer: req.headers.referer || null
+        user_agent: req.headers['user-agent']?.substring(0, 500) || null,
+        referrer: req.headers.referer?.substring(0, 500) || null
       });
 
     res.json({ status: 'success' });
@@ -365,6 +529,8 @@ app.listen(PORT, () => {
   console.log(`   POST /api/widget/check-email`);
   console.log(`   POST /api/widget/log-spin`);
   console.log(`   POST /api/widget/view`);
+  console.log(`   GET  /api/widget/csrf-token`);
+  console.log(`🔒 Security: Rate limiting, CSRF protection, and security headers enabled`);
 });
 
 module.exports = { app, generateShopToken };
