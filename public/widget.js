@@ -263,6 +263,7 @@
     if (!prize || !contact) return;
 
     log('Kaydediliyor:', prize.id, fullName, contact);
+    log('Shop UUID:', shopUuid);
 
     // Basitleştirilmiş RPC fonksiyonu (token doğrulamasız)
     supabaseClient
@@ -273,6 +274,7 @@
         p_full_name: fullName
       })
       .then(function(result) {
+        log('RPC Result:', result);
         if (result.error) {
           logError('Spin kayıt hatası:', result.error.message, result.error);
           return;
