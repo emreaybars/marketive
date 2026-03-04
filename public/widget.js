@@ -417,7 +417,8 @@
         updateUI();
 
         // Form submission handler
-        var form = widget.querySelector('form');
+        var widgetElement = document.getElementById('carkifelek-widget');
+        var form = widgetElement ? widgetElement.querySelector('form') : null;
         if (form) {
           form.addEventListener('submit', function(e) {
             e.preventDefault();
