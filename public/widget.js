@@ -304,6 +304,8 @@
 
     var container = document.createElement('div');
     container.id = 'carkifelek-widget-container';
+    // Container CSS - görünürlük için gerekli
+    container.style.cssText = 'position: fixed; top: 0; left: 0; width: 100%; height: 100%; pointer-events: none; z-index: 999999;';
     container.innerHTML = buildWidgetHTML();
     document.body.appendChild(container);
 
@@ -311,10 +313,10 @@
 
     // Animation entry ve otomatik modal açma
     setTimeout(function() {
-      var widget = document.getElementById('carkifelek-widget-container');
-      if (widget) {
-        widget.style.opacity = '1';
-        widget.style.transform = 'translateY(0)';
+      // Toggle button widget'ını göster
+      var widgetEl = document.getElementById('carkifelek-widget');
+      if (widgetEl) {
+        widgetEl.style.opacity = '1';
       }
 
       // Debug: showOnLoad değeri
@@ -476,7 +478,7 @@
             buttonContent +
 
         // Success Modal - Monochrome Premium Design
-        '<div id="carkifelek-prize-modal" style="display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.8); backdrop-filter: blur(4px); z-index: 99999; align-items: center; justify-content: center; opacity: 0; transition: opacity 0.3s;">' +
+        '<div id="carkifelek-prize-modal" style="display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.8); backdrop-filter: blur(4px); z-index: 99999; align-items: center; justify-content: center; opacity: 0; transition: opacity 0.3s; pointer-events: auto;">' +
           '<div style="background: linear-gradient(145deg, #ffffff 0%, #f8f8f8 100%); width: 90%; max-width: 340px; border-radius: 20px; padding: 0; text-align: center; position: relative; box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.5), 0 0 0 1px rgba(0,0,0,0.05); transform: scale(0.9); animation: modalAppear 0.4s cubic-bezier(0.34, 1.56, 0.64, 1) forwards; overflow: hidden;">' +
             // Header with confetti decoration
             '<div style="background: linear-gradient(135deg, #1a1a1a 0%, #2d2d2d 100%); padding: 25px 20px 20px; position: relative;">' +
@@ -531,7 +533,8 @@
            'position: relative; overflow: hidden;' +
            'transition: all 0.3s;' +
            'font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;' +
-           'transform: rotate(-0.25turn); transform-origin: right center;';
+           'transform: rotate(-0.25turn); transform-origin: right center;' +
+           'pointer-events: auto;';
   }
 
   function getModalStyles() {
@@ -539,7 +542,8 @@
            'background: rgba(0,0,0,0.7);' +
            'display: none; justify-content: center; align-items: center;' +
            'z-index: 1000000; overflow-y: auto;' +
-           'animation: fadeIn 0.3s ease;';
+           'animation: fadeIn 0.3s ease;' +
+           'pointer-events: auto;';
   }
 
   function getModalContentStyles(bgStyle) {
