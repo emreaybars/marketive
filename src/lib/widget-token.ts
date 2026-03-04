@@ -36,13 +36,52 @@ export async function generateWidgetToken(shopId: string, shopUuid: string): Pro
   return base64UrlEncode(JSON.stringify(signedPayload))
 }
 
-export function generateWidgetEmbedCode(shopId: string, shopUuid: string, domain: string): string {
-  const tokenPromise = generateWidgetToken(shopId, shopUuid)
+/**
+ * Generate complete embed code with Supabase config
+ * @param shopId - Shop ID (public)
+ * @param shopUuid - Shop UUID (internal)
+ * @param domain - Domain where widget.js is hosted
+ * @param token - Pre-generated token (optional, will generate if not provided)
+ */
+export async function generateWidgetEmbedCode(
+  shopId: string,
+  shopUuid: string,
+  domain: string,
+  token?: string
+): Promise<string> {
+  const finalToken = token || await generateWidgetToken(shopId, shopUuid)
+  const supabaseUrl = import.meta.env.VITE_SUPABASE_URL
+  const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY
 
-  // For synchronous use, return the code structure (token will be async filled)
+  if (!supabaseUrl || !supabaseAnonKey) {
+    console.error('[Widget] Supabase environment variables missing')
+    return '<!-- Widget configuration error: Missing Supabase credentials -->'
+  }
+
   return `<!-- Çarkıfelek Widget -->
 <script id="carkifelek-widget-script"
-  data-shop-token="${tokenPromise}"
+  data-supabase-url="${supabaseUrl}"
+  data-supabase-key="${supabaseAnonKey}"
+  data-shop-token="${finalToken}"
+  data-shop-id="${shopUuid}"
+  src="${domain}/widget.js">
+</script>`
+}
+
+export function generateWidgetEmbedCodeSync(shopId: string, shopUuid: string, token: string, domain: string): string {
+  const supabaseUrl = import.meta.env.VITE_SUPABASE_URL
+  const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY
+
+  if (!supabaseUrl || !supabaseAnonKey) {
+    return '<!-- Widget configuration error: Missing Supabase credentials -->'
+  }
+
+  return `<!-- Çarkıfelek Widget -->
+<script id="carkifelek-widget-script"
+  data-supabase-url="${supabaseUrl}"
+  data-supabase-key="${supabaseAnonKey}"
+  data-shop-token="${token}"
+  data-shop-id="${shopUuid}"
   src="${domain}/widget.js">
 </script>`
 }

@@ -2,7 +2,7 @@
 
 import { createContext, useContext, useState, useEffect, useCallback, ReactNode } from 'react'
 import { supabase } from '@/lib/supabase-client'
-import { generateWidgetToken } from '@/lib/widget-token'
+import { generateWidgetToken, generateWidgetEmbedCodeSync } from '@/lib/widget-token'
 import { useUser } from '@/context/auth-provider'
 
 interface Wheel {
@@ -207,11 +207,7 @@ export function CarkProvider({ children }: { children: ReactNode }) {
         wheels.map(async (wheel: any) => {
           const token = await generateWidgetToken(wheel.shop_id, wheel.id)
           const domain = window.location.origin
-          const embedCode = `<!-- Çarkıfelek Widget -->
-<script id="carkifelek-widget-script"
-  data-shop-token="${token}"
-  src="${domain}/widget.js">
-</script>`
+          const embedCode = generateWidgetEmbedCodeSync(wheel.shop_id, wheel.id, token, domain)
 
           // Fetch prizes for this wheel
           const { data: prizesData } = await supabase
@@ -303,11 +299,7 @@ export function CarkProvider({ children }: { children: ReactNode }) {
 
       // 4. Generate embed code (widget ve admin aynı domain'de)
       const token = await generateWidgetToken(data.storeId, shop.id)
-      const embedCode = `<!-- Çarkıfelek Widget -->
-<script id="carkifelek-widget-script"
-  data-shop-token="${token}"
-  src="${window.location.origin}/widget.js">
-</script>`
+      const embedCode = generateWidgetEmbedCodeSync(data.storeId, shop.id, token, window.location.origin)
 
       // 5. Refresh list
       await refreshWheels()

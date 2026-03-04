@@ -1,7 +1,7 @@
 /**
  * Çarkıfelek Widget - Red Premium Edition
  * Design matching wheel-widget-2.js
- * Version 7.0.0 - GÜVENLİK YAMALAR ILE
+ * Version 8.0.0 - Script tag ile konfigürasyon desteği
  */
 
 (function() {
@@ -14,16 +14,41 @@
   // GÜVENLİK: API keys hardcoded değil, data attributes'ten alınıyor
   var SUPABASE_URL = null;
   var SUPABASE_ANON_KEY = null;
+  var shopToken = null;
+  var shopId = null;
 
   function initConfig() {
+    // Önce script tag'den konfigürasyon almayı dene
+    var scriptTag = document.getElementById('carkifelek-widget-script');
+    if (scriptTag) {
+      SUPABASE_URL = scriptTag.getAttribute('data-supabase-url');
+      SUPABASE_ANON_KEY = scriptTag.getAttribute('data-supabase-key');
+      shopToken = scriptTag.getAttribute('data-shop-token') || scriptTag.getAttribute('data-token');
+      shopId = scriptTag.getAttribute('data-shop-id');
+
+      // Script tag'den config bulundu, container oluştur
+      if (SUPABASE_URL && SUPABASE_ANON_KEY) {
+        // Widget container'ı dinamik oluştur
+        var container = document.createElement('div');
+        container.id = 'carkifelek-widget';
+        container.style.display = 'none'; // Script ile oluşturulduysa gizle
+        scriptTag.parentNode.insertBefore(container, scriptTag.nextSibling);
+        return true;
+      }
+    }
+
+    // Yoksa DIV container'dan al (eski yöntem)
     var widget = document.getElementById('carkifelek-widget');
     if (!widget) {
-      console.error('[Çarkıfelek] Widget container bulunamadı');
+      console.error('[Çarkıfelek] Widget container veya script bulunamadı');
+      console.error('[Çarkıfelek] Lütfen embed kodunu kontrol edin');
       return false;
     }
 
     SUPABASE_URL = widget.getAttribute('data-supabase-url');
     SUPABASE_ANON_KEY = widget.getAttribute('data-supabase-key');
+    shopToken = widget.getAttribute('data-token') || widget.getAttribute('data-shop-token');
+    shopId = widget.getAttribute('data-shop-id');
 
     if (!SUPABASE_URL || !SUPABASE_ANON_KEY) {
       console.error('[Çarkıfelek] API konfigürasyonu eksik');
@@ -367,15 +392,15 @@
       return;
     }
 
-    var widget = document.getElementById('carkifelek-widget');
-    var token = widget.getAttribute('data-token');
+    // Token ve shopId zaten initConfig()'te ayarlandı
+    var token = shopToken;
 
     if (!token) {
       console.error('[Çarkıfelek] Token bulunamadı');
       return;
     }
 
-    shopUuid = widget.getAttribute('data-shop-id');
+    shopUuid = shopId;
 
     loadSupabaseSDK(function(err) {
       if (err) {
