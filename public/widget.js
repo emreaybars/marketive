@@ -263,15 +263,24 @@
     if (!prize || !contact) return;
 
     log('Kaydediliyor:', prize.id, fullName, contact);
-    log('Shop UUID:', shopUuid);
 
-    // Basitleştirilmiş RPC fonksiyonu (token doğrulamasız)
+    // Widget token'ı al
+    var widgetScript = document.getElementById('carkifelek-widget-script');
+    var shopToken = widgetScript ? widgetScript.getAttribute('data-shop-token') : null;
+
+    if (!shopToken) {
+      logError('Shop token bulunamadı');
+      return;
+    }
+
+    // Güvenli RPC fonksiyonu (token doğrulama + user_agent)
     supabaseClient
       .rpc('widget_log_spin_simple', {
-        p_shop_uuid: shopUuid,
+        p_token: shopToken,
         p_contact: contact,
         p_prize_id: prize.id,
-        p_full_name: fullName
+        p_full_name: fullName,
+        p_user_agent: navigator.userAgent
       })
       .then(function(result) {
         log('RPC Result:', result);
