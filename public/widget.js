@@ -317,14 +317,31 @@
         widget.style.transform = 'translateY(0)';
       }
 
+      // Debug: showOnLoad değeri
+      log('showOnLoad değeri:', widgetData ? widgetData.widget?.showOnLoad : 'widgetData yok');
+
       // Eğer showOnLoad aktifse modal'ı otomatik aç
       if (widgetData && widgetData.widget && widgetData.widget.showOnLoad) {
         var modal = document.getElementById('carkifelek-modal');
         var toggleBtn = document.getElementById('carkifelek-toggle');
-        if (modal && toggleBtn) {
+        log('Modal element:', modal);
+        log('ToggleBtn element:', toggleBtn);
+
+        if (modal) {
           modal.style.display = 'flex';
+          log('Modal display flex yapıldı');
+        }
+        if (toggleBtn) {
           toggleBtn.style.display = 'none';
-          log('Modal otomatik açıldı');
+          log('ToggleBtn gizlendi');
+        }
+        log('Modal otomatik açıldı');
+      } else {
+        log('showOnLoad false, toggle button gösteriliyor');
+        // showOnLoad false ise toggle button'ı göster
+        var toggleBtn = document.getElementById('carkifelek-toggle');
+        if (toggleBtn) {
+          toggleBtn.style.display = 'flex';
         }
       }
     }, 100);
