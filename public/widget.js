@@ -236,14 +236,22 @@
 
     var contactType = widgetData.shop.contactInfoType;
 
-    supabaseClient
-      .rpc('check_contact_used', {
-        p_shop_uuid: shopUuid,
-        p_contact: contact,
-        p_contact_type: contactType
-      })
+    // Doğrudan wheel_spins tablosundan kontrol et
+    var query = supabaseClient
+      .from('wheel_spins')
+      .select('id')
+      .eq('shop_id', shopUuid);
+
+    if (contactType === 'email') {
+      query = query.eq('email', contact);
+    } else {
+      query = query.eq('phone', contact);
+    }
+
+    query
+      .limit(1)
       .then(function(result) {
-        callback(null, result.data || false);
+        callback(null, result.data && result.data.length > 0);
       })
       .catch(function(err) {
         logError('İletişim kontrol hatası', err);
@@ -251,30 +259,59 @@
       });
   }
 
-  function logSpin(prizeId, fullName, contact) {
-    if (!prizeId || !contact) return;
+  function logSpin(prize, fullName, contact) {
+    if (!prize || !contact) return;
 
-    log('Kaydediliyor:', prizeId, fullName, contact);
+    log('Kaydediliyor:', prize.id, fullName, contact);
 
     var contactType = widgetData.shop.contactInfoType;
-    var params = {
-      p_shop_uuid: shopUuid,
-      p_prize_id: prizeId,
-      p_full_name: fullName,
-      p_ip_address: null,
-      p_user_agent: navigator.userAgent
+    var spinData = {
+      shop_id: shopUuid,
+      full_name: fullName,
+      created_at: new Date().toISOString()
     };
 
     if (contactType === 'email') {
-      params.p_email = contact;
+      spinData.email = contact;
     } else {
-      params.p_phone = contact;
+      spinData.phone = contact;
     }
 
+    // Önce wheel_spins tablosuna kaydet
     supabaseClient
-      .rpc('log_wheel_spin', params)
+      .from('wheel_spins')
+      .insert(spinData)
+      .select()
+      .single()
       .then(function(result) {
-        log('Kayıt başarılı:', result.data);
+        if (result.error) {
+          logError('Spin kayıt hatası', result.error);
+          return;
+        }
+
+        var spinId = result.data.id;
+
+        // Coupon kodu oluştur
+        var couponCode = null;
+        if (prize.coupon_codes && prize.coupon_codes.trim() !== '') {
+          couponCode = prize.coupon_codes.split('\n')[0].trim();
+        } else {
+          couponCode = Math.random().toString(36).substring(2, 10).toUpperCase();
+        }
+
+        // Sonra wheel_wins tablosuna kaydet
+        return supabaseClient
+          .from('wheel_wins')
+          .insert({
+            spin_id: spinId,
+            prize_id: prize.id,
+            shop_id: shopUuid,
+            coupon_code: couponCode,
+            created_at: new Date().toISOString()
+          })
+          .then(function() {
+            log('Kayıt başarılı - Spin ID:', spinId, 'Coupon:', couponCode);
+          });
       })
       .catch(function(err) {
         logError('Kayıt hatası', err);
@@ -401,7 +438,7 @@
             '<input type="' + inputType + '" id="' + inputId + '" placeholder="' + inputPlaceholder + '" style="' + getInputStyles() + '" />' +
           '</div>' +
           // KVKK Consent
-          '<label style="' + getCheckboxStyles() + '" onclick="toggleConsent(\'kvvk\')">' +
+          '<label style="' + getCheckboxStyles() + '">' +
             '<input type="checkbox" id="carkifelek-kvvk-checkbox" style="width: 18px; height: 18px; border-radius: 15px;" />' +
             '<span style="color: rgba(255,255,255,0.8); font-size: 10px; line-height: 1.3;">Tanıtım ve kampanya içerikli SMS ve WhatsApp iletilerini almayı kabul ediyorum. Aydınlatma Metni\'ni okudum ve KVKK kapsamında bilgilendirildim.</span>' +
           '</label>' +
@@ -520,7 +557,7 @@
 
   function getWidgetStyles() {
     return 'position: fixed; top: 50%; right: 0; transform: translateY(-50%); z-index: 999999;' +
-           'opacity: 0; transition: all 0.4s cubic-bezier(0.23, 1, 0.32, 1);';
+           'opacity: 1; transition: all 0.4s cubic-bezier(0.23, 1, 0.32, 1); pointer-events: all;';
   }
 
   function getToggleButtonStyles() {
@@ -726,7 +763,7 @@
       saveSpinData(prize, fullName, contact);
 
       // Log to database
-      logSpin(prize.id, fullName, contact);
+      logSpin(prize, fullName, contact);
 
       showPrizeModal(prize, fullName, contact);
     }, 5000);
