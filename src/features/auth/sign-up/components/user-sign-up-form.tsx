@@ -5,7 +5,7 @@ import { zodResolver } from '@hookform/resolvers/zod'
 import { Link, useNavigate } from '@tanstack/react-router'
 import { Loader2, UserPlus } from 'lucide-react'
 import { toast } from 'sonner'
-import { useSignUp } from '@clerk/clerk-react'
+import { useAuth } from '@/context/auth-provider'
 import { cn } from '@/lib/utils'
 import { Button } from '@/components/ui/button'
 import {
@@ -42,7 +42,7 @@ export function UserSignUpForm({
 }: UserSignUpFormProps) {
   const [isLoading, setIsLoading] = useState(false)
   const navigate = useNavigate()
-  const { signUp, isLoaded: isSignUpLoaded } = useSignUp()
+  const { signUp, isLoaded } = useAuth()
 
   const form = useForm<z.infer<typeof formSchema>>({
     resolver: zodResolver(formSchema),
@@ -54,27 +54,22 @@ export function UserSignUpForm({
   })
 
   async function onSubmit(data: z.infer<typeof formSchema>) {
-    if (!isSignUpLoaded) return
+    if (!isLoaded) return
 
     setIsLoading(true)
 
     try {
-      const result = await signUp.create({
-        emailAddress: data.email,
-        password: data.password,
-      })
+      const { error } = await signUp(data.email, data.password)
 
-      if (result.status === 'complete') {
-        toast.success('Kayıt başarılı!')
+      if (error) {
+        toast.error(error.message || 'Kayıt başarısız')
+      } else {
+        toast.success('Kayıt başarılı! E-posta adresinizi doğrulayın.')
         const targetPath = redirectTo || '/'
         navigate({ to: targetPath, replace: true })
-      } else if (result.status === 'missing_requirements') {
-        // Email verification required
-        toast.success('Doğrama e-postası gönderildi!')
-        // Navigate to verification page or show verification UI
       }
     } catch (error: any) {
-      toast.error(error?.errors?.[0]?.message || 'Kayıt başarısız')
+      toast.error(error?.message || 'Kayıt başarısız')
     } finally {
       setIsLoading(false)
     }
@@ -126,7 +121,7 @@ export function UserSignUpForm({
             </FormItem>
           )}
         />
-        <Button className='mt-2' disabled={isLoading || !isSignUpLoaded}>
+        <Button className='mt-2' disabled={isLoading || !isLoaded}>
           {isLoading ? <Loader2 className='animate-spin' /> : <UserPlus />}
           Kayıt Ol
         </Button>

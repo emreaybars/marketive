@@ -2,7 +2,7 @@ import { Logo } from '@/assets/logo'
 import { cn } from '@/lib/utils'
 import dashboardDark from './assets/dashboard-dark.png'
 import dashboardLight from './assets/dashboard-light.png'
-import { SignIn as ClerkSignIn } from '@clerk/clerk-react'
+import { UserAuthForm } from './components/user-auth-form'
 
 export function SignIn2() {
   return (
@@ -15,7 +15,7 @@ export function SignIn2() {
           </div>
         </div>
         <div className='mx-auto flex w-full max-w-sm flex-col justify-center space-y-2'>
-          <ClerkSignIn signUpUrl='/sign-up' />
+          <UserAuthForm />
           <p className='px-8 text-center text-sm text-muted-foreground'>
             Giriş yaparak{' '}
             <a

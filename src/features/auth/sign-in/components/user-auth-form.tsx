@@ -6,7 +6,7 @@ import { Link, useNavigate } from '@tanstack/react-router'
 import { Loader2, LogIn } from 'lucide-react'
 import { toast } from 'sonner'
 import { IconFacebook, IconGithub } from '@/assets/brand-icons'
-import { useSignIn } from '@clerk/clerk-react'
+import { useAuth } from '@/context/auth-provider'
 import { cn } from '@/lib/utils'
 import { Button } from '@/components/ui/button'
 import {
@@ -39,7 +39,7 @@ export function UserAuthForm({
 }: UserAuthFormProps) {
   const [isLoading, setIsLoading] = useState(false)
   const navigate = useNavigate()
-  const { signIn, isLoaded: isSignInLoaded } = useSignIn()
+  const { signIn, isLoaded } = useAuth()
 
   const form = useForm<z.infer<typeof formSchema>>({
     resolver: zodResolver(formSchema),
@@ -50,26 +50,22 @@ export function UserAuthForm({
   })
 
   async function onSubmit(data: z.infer<typeof formSchema>) {
-    if (!isSignInLoaded) return
+    if (!isLoaded) return
 
     setIsLoading(true)
 
     try {
-      const result = await signIn.create({
-        identifier: data.email,
-        password: data.password,
-      })
+      const { error } = await signIn(data.email, data.password)
 
-      if (result.status === 'complete') {
+      if (error) {
+        toast.error(error.message || 'Giriş başarısız')
+      } else {
         toast.success('Giriş başarılı!')
         const targetPath = redirectTo || '/'
         navigate({ to: targetPath, replace: true })
-      } else if (result.status === 'needs_first_factor') {
-        // Handle 2FA if needed
-        toast.info('İki faktörlü doğrulama gerekiyor')
       }
     } catch (error: any) {
-      toast.error(error?.errors?.[0]?.message || 'Giriş başarısız')
+      toast.error(error?.message || 'Giriş başarısız')
     } finally {
       setIsLoading(false)
     }
@@ -114,7 +110,7 @@ export function UserAuthForm({
             </FormItem>
           )}
         />
-        <Button className='mt-2' disabled={isLoading || !isSignInLoaded}>
+        <Button className='mt-2' disabled={isLoading || !isLoaded}>
           {isLoading ? <Loader2 className='animate-spin' /> : <LogIn />}
           Giriş Yap
         </Button>
@@ -138,6 +134,16 @@ export function UserAuthForm({
             <IconFacebook className='h-4 w-4' /> Facebook
           </Button>
         </div>
+
+        <p className='px-8 text-center text-sm text-muted-foreground'>
+          Hesabınız yok mu?{' '}
+          <Link
+            to='/sign-up'
+            className='underline underline-offset-4 hover:text-primary font-medium'
+          >
+            Kayıt Olun
+          </Link>
+        </p>
       </form>
     </Form>
   )

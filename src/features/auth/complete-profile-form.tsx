@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { useUser } from '@clerk/clerk-react'
+import { useAuth, useUser } from '@/context/auth-provider'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
@@ -8,7 +8,8 @@ import { Loader2, UserCircle, Phone } from 'lucide-react'
 import { toast } from 'sonner'
 
 export function CompleteProfileForm() {
-  const { user, isLoaded } = useUser()
+  const { isLoaded } = useUser()
+  const { updateProfile } = useAuth()
   const [firstName, setFirstName] = useState('')
   const [lastName, setLastName] = useState('')
   const [phoneNumber, setPhoneNumber] = useState('')
@@ -38,20 +39,17 @@ export function CompleteProfileForm() {
     setIsLoading(true)
 
     try {
-      await user?.update({
+      const { error } = await updateProfile({
         firstName: firstName.trim(),
         lastName: lastName.trim(),
+        phoneNumber: cleanPhone,
       })
 
-      // Telefon numarasını unsafeMetadata'da sakla
-      await user?.update({
-        unsafeMetadata: {
-          ...(user?.unsafeMetadata || {}),
-          phoneNumber: cleanPhone,
-        },
-      })
-
-      toast.success('Profil bilgileriniz güncellendi')
+      if (error) {
+        toast.error(error.message || 'Profil güncellenirken bir hata oluştu')
+      } else {
+        toast.success('Profil bilgileriniz güncellendi')
+      }
     } catch (error) {
       console.error('Profile update error:', error)
       toast.error('Profil güncellenirken bir hata oluştu')
@@ -99,7 +97,7 @@ export function CompleteProfileForm() {
           </div>
           <CardTitle>Profil Bilgilerinizi Tamamlayın</CardTitle>
           <CardDescription>
-            Apple ile giriş yaptınız. Lütfen hesabınızı tamamlamak için bilgilerinizi girin.
+            Hesabınızı tamamlamak için bilgilerinizi girin.
           </CardDescription>
         </CardHeader>
         <CardContent>

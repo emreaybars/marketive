@@ -1,5 +1,5 @@
 import { createFileRoute, Navigate } from '@tanstack/react-router'
-import { useAuth, useUser } from '@clerk/clerk-react'
+import { useAuth, useUser } from '@/context/auth-provider'
 import { Loader2 } from 'lucide-react'
 import { AuthenticatedLayout } from '@/components/layout/authenticated-layout'
 import { CompleteProfileForm } from '@/features/auth/complete-profile-form'
@@ -10,9 +10,9 @@ export const Route = createFileRoute('/_authenticated')({
 
 function RouteComponent() {
   const { isLoaded, isSignedIn } = useAuth()
-  const { user, isLoaded: isUserLoaded } = useUser()
+  const { user } = useUser()
 
-  if (!isLoaded || !isUserLoaded) {
+  if (!isLoaded) {
     return (
       <div className='flex h-svh items-center justify-center'>
         <Loader2 className='size-8 animate-spin' />

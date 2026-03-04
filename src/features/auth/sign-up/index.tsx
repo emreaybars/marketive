@@ -1,10 +1,14 @@
-import { SignUp as ClerkSignUp } from '@clerk/clerk-react'
+import { UserSignUpForm } from './components/user-sign-up-form'
 import { AuthLayout } from '../auth-layout'
 
-export function SignUp() {
+interface SignUpProps {
+  redirectTo?: string
+}
+
+export function SignUp({ redirectTo }: SignUpProps) {
   return (
     <AuthLayout>
-      <ClerkSignUp signInUrl='/sign-in' />
+      <UserSignUpForm redirectTo={redirectTo} />
     </AuthLayout>
   )
 }

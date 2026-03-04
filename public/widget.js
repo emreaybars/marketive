@@ -1,7 +1,7 @@
 /**
- * Çarkıfelek Widget - WhatsApp Green Premium Edition
- * Modern wheel with visible prize names, white modal, clean design
- * Version 5.4.0 - Smoother slower spin (3s) with better easing
+ * Çarkıfelek Widget - Red Premium Edition
+ * Design matching wheel-widget-2.js
+ * Version 6.0.0
  */
 
 (function() {
@@ -19,14 +19,79 @@
   // ============================================
 
   var widgetData = null;
-  var wheelCanvas = null;
-  var wheelContext = null;
   var isSpinning = false;
   var currentRotation = 0;
   var shopUuid = null;
   var supabaseClient = null;
   var isInitialized = false;
   var selectedPrize = null;
+  var hasSpunToday = false;
+  var savedSpinData = null;
+
+  // ============================================
+  // LOCAL STORAGE HELPERS
+  // ============================================
+
+  function getStorageKey() {
+    return 'carkifelek_spin_' + (shopUuid || 'default');
+  }
+
+  function saveSpinData(prize, fullName, contact) {
+    var key = getStorageKey();
+    var data = {
+      prize: prize,
+      fullName: fullName,
+      contact: contact,
+      timestamp: Date.now(),
+      expiresAt: Date.now() + (24 * 60 * 60 * 1000) // 24 saat
+    };
+    try {
+      localStorage.setItem(key, JSON.stringify(data));
+      savedSpinData = data;
+      hasSpunToday = true;
+    } catch (e) {
+      logError('LocalStorage kayıt hatası', e);
+    }
+  }
+
+  function getSpinData() {
+    var key = getStorageKey();
+    try {
+      var data = localStorage.getItem(key);
+      if (data) {
+        var parsed = JSON.parse(data);
+        // 24 saat geçmiş mi kontrol et
+        if (parsed.expiresAt && Date.now() < parsed.expiresAt) {
+          return parsed;
+        } else {
+          // Süresi dolmuş, sil
+          localStorage.removeItem(key);
+          return null;
+        }
+      }
+    } catch (e) {
+      logError('LocalStorage okuma hatası', e);
+    }
+    return null;
+  }
+
+  function checkIfSpunToday() {
+    var data = getSpinData();
+    if (data && data.expiresAt && Date.now() < data.expiresAt) {
+      savedSpinData = data;
+      hasSpunToday = true;
+      return true;
+    }
+    hasSpunToday = false;
+    savedSpinData = null;
+    return false;
+  }
+
+  function getTimeRemaining() {
+    if (!savedSpinData || !savedSpinData.expiresAt) return 0;
+    var remaining = savedSpinData.expiresAt - Date.now();
+    return Math.max(0, Math.floor(remaining / 1000 / 60)); // dakika cinsinden
+  }
 
   // ============================================
   // UTILITIES
@@ -133,15 +198,16 @@
             contactInfoType: widget.contact_info_type || 'email'
           },
           widget: {
-            title: widget.widget_title || 'Şansını Deneme! 🎁',
-            description: widget.widget_description || 'Çarkı çevir, arma kazan!',
+            title: widget.widget_title || 'Çarkı Çevir<br/>Hediyeni Kazan!',
+            description: widget.widget_description || 'Hediyeni almak için hemen çarkı çevir.',
             buttonText: widget.widget_button_text || 'ÇARKI ÇEVİR',
             showOnLoad: widget.widget_show_on_load || false,
             popupDelay: widget.widget_popup_delay || 0,
-            backgroundColor: widget.widget_background_color || '#25D366',
-            buttonColor: widget.widget_button_color || '#25D366',
-            titleColor: widget.widget_title_color || '#1a1a1a',
-            descriptionColor: widget.widget_description_color || '#666666'
+            backgroundColor: widget.widget_background_color || 'rgba(139, 0, 0, 0.9)',
+            buttonColor: widget.widget_button_color || '#d10000',
+            buttonTextColor: widget.widget_button_text_color || '#ffffff',
+            titleColor: widget.widget_title_color || '#ffffff',
+            descriptionColor: widget.widget_description_color || '#ffffff'
           },
           prizes: widget.prizes || []
         };
@@ -218,31 +284,7 @@
   }
 
   // ============================================
-  // COLOR UTILITIES
-  // ============================================
-
-  function getContrastColor(hexColor) {
-    var hex = hexColor.replace('#', '');
-    var r = parseInt(hex.substr(0, 2), 16);
-    var g = parseInt(hex.substr(2, 2), 16);
-    var b = parseInt(hex.substr(4, 2), 16);
-    var brightness = (r * 299 + g * 587 + b * 114) / 1000;
-    return brightness > 128 ? '#1a1a1a' : '#ffffff';
-  }
-
-  function lightenColor(hexColor, amount) {
-    var hex = hexColor.replace('#', '');
-    var r = Math.min(255, parseInt(hex.substr(0, 2), 16) + amount);
-    var g = Math.min(255, parseInt(hex.substr(2, 2), 16) + amount);
-    var b = Math.min(255, parseInt(hex.substr(4, 2), 16) + amount);
-    return '#' +
-      (r < 16 ? '0' : '') + r.toString(16) +
-      (g < 16 ? '0' : '') + g.toString(16) +
-      (b < 16 ? '0' : '') + b.toString(16);
-  }
-
-  // ============================================
-  // WHEEL RENDERING - WHATSAPP GREEN PREMIUM
+  // WIDGET RENDERING - RED PREMIUM DESIGN
   // ============================================
 
   function renderWidget() {
@@ -257,7 +299,6 @@
     document.body.appendChild(container);
 
     setupEventListeners();
-    drawWheel();
 
     // Animation entry
     setTimeout(function() {
@@ -271,355 +312,305 @@
 
   function buildWidgetHTML() {
     var isPhone = widgetData.shop.contactInfoType === 'phone';
-    var inputPlaceholder = isPhone ? 'Telefon numaranız (5XX XXX XX XX)' : 'E-posta adresiniz';
+    var inputPlaceholder = isPhone ? '5xx xxx xx xx' : 'ornek@example.com';
     var inputType = isPhone ? 'tel' : 'email';
     var inputId = isPhone ? 'carkifelek-phone' : 'carkifelek-email';
 
+    var bgStyle = widgetData.widget.backgroundColor || 'rgba(139, 0, 0, 0.9)';
+
+    // Check if user has already spun today
+    checkIfSpunToday();
+
+    // Build form content based on spin state
+    var formContent = '';
+    if (hasSpunToday && savedSpinData) {
+      // Already spun - show prize info
+      var timeRemaining = getTimeRemaining();
+      var hoursRemaining = Math.floor(timeRemaining / 60);
+      var minutesRemaining = timeRemaining % 60;
+      var timeText = hoursRemaining > 0 ? hoursRemaining + ' saat ' + minutesRemaining + ' dakika' : minutesRemaining + ' dakika';
+
+      formContent =
+        '<div id="carkifelek-form" style="width: 100%; max-width: 350px; margin: 0 auto; text-align: center;">' +
+          '<div style="background: rgba(255,255,255,0.15); border-radius: 12px; padding: 20px; margin-bottom: 15px; border: 1px solid rgba(255,255,255,0.2);">' +
+            '<div style="font-size: 40px; margin-bottom: 10px;">🎁</div>' +
+            '<h3 style="color: #fff; font-size: 16px; margin: 0 0 8px 0; font-weight: 600;">Çarkı Zaten Çevirdiniz!</h3>' +
+            '<p style="color: rgba(255,255,255,0.9); font-size: 13px; margin: 0 0 15px 0; line-height: 1.5;">Kazandığınız ödül: <strong>' + (savedSpinData.prize ? savedSpinData.prize.name : 'Ödül') + '</strong></p>' +
+            '<button id="carkifelek-view-prize" style="background: linear-gradient(135deg, #ffce01 0%, #ffa500 100%); color: #1a1a1a; border: none; padding: 12px 24px; border-radius: 8px; font-size: 14px; font-weight: 600; cursor: pointer; width: 100%; box-shadow: 0 4px 12px rgba(0,0,0,0.2);">Ödülümü Gör</button>' +
+          '</div>' +
+          '<p style="color: rgba(255,255,255,0.7); font-size: 11px; margin: 0;">Yeniden çevirmek için kalan süre: <strong>' + timeText + '</strong></p>' +
+        '</div>';
+    } else {
+      // Not spun yet - show form
+      formContent =
+        '<div id="carkifelek-form" style="width: 100%; max-width: 350px; margin: 0 auto 15px;">' +
+          // Ad Soyad
+          '<div style="position: relative; margin-bottom: 10px;">' +
+            '<div style="width: 20px; height: 20px; position: absolute; top: 10px; left: 12px; opacity: 0.3; color: #333;">' +
+              '<svg viewBox="0 0 24 24" fill="currentColor" width="16" height="16"><path d="M12 12c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm0 2c-2.67 0-8 1.34-8 4v2h16v-2c0-2.66-5.33-4-8-4z"/></svg>' +
+            '</div>' +
+            '<input type="text" id="carkifelek-fullname" placeholder="Ad Soyad" style="' + getInputStyles() + '" />' +
+          '</div>' +
+          // Email/Phone
+          '<div style="position: relative; margin-bottom: 10px;">' +
+            '<div style="width: 20px; height: 20px; position: absolute; top: 10px; left: 12px; opacity: 0.3; color: #333;">' +
+              (isPhone ?
+                '<svg viewBox="0 0 24 24" fill="currentColor" width="16" height="16"><path d="M6.62 10.79c1.44 2.83 3.76 5.14 6.59 6.59l2.2-2.2c.27-.27.67-.36 1.02-.24 1.12.37 2.33.57 3.57.57.55 0 1 .45 1 1V20c0 .55-.45 1-1 1-9.39 0-17-7.61-17-17 0-.55.45-1 1-1h3.5c.55 0 1 .45 1 1 0 1.25.2 2.45.57 3.57.11.35.03.74-.25 1.02l-2.2 2.2z"/></svg>' :
+                '<svg viewBox="0 0 24 24" fill="currentColor" width="16" height="16"><path d="M20 4H4c-1.1 0-1.99.9-1.99 2L2 18c0 1.1.9 2 2 2h16c1.1 0 2-.9 2-2V6c0-1.1-.9-2-2-2zm0 4l-8 5-8-5V6l8 5 8-5v2z"/></svg>'
+              ) +
+            '</div>' +
+            '<input type="' + inputType + '" id="' + inputId + '" placeholder="' + inputPlaceholder + '" style="' + getInputStyles() + '" />' +
+          '</div>' +
+          // KVKK Consent
+          '<label style="' + getCheckboxStyles() + '" onclick="toggleConsent(\'kvvk\')">' +
+            '<input type="checkbox" id="carkifelek-kvvk-checkbox" style="width: 18px; height: 18px; border-radius: 15px;" />' +
+            '<span style="color: rgba(255,255,255,0.8); font-size: 10px; line-height: 1.3;">Tanıtım ve kampanya içerikli SMS ve WhatsApp iletilerini almayı kabul ediyorum. Aydınlatma Metni\'ni okudum ve KVKK kapsamında bilgilendirildim.</span>' +
+          '</label>' +
+          '<div id="carkifelek-email-error" style="color: #ffcccc; font-size: 12px; margin-top: 5px; display: none;"></div>' +
+        '</div>';
+    }
+
+    // Button content based on spin state
+    var buttonContent = '';
+    if (hasSpunToday) {
+      buttonContent = '<div style="padding: 0; width: 100%; max-width: 350px; margin: 0 auto;"></div>';
+    } else {
+      buttonContent =
+        '<div style="padding: 0; width: 100%; max-width: 350px; margin: 0 auto;">' +
+          '<button id="carkifelek-spin" style="' + getSpinButtonStyles() + '">' +
+            '<span id="carkifelek-spin-text">' + widgetData.widget.buttonText + '</span>' +
+          '</button>' +
+        '</div>';
+    }
+
     return '<div id="carkifelek-widget" style="' + getWidgetStyles() + '">' +
       '<button id="carkifelek-toggle" style="' + getToggleButtonStyles() + '">' +
-        '<svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">' +
-          '<circle cx="12" cy="12" r="10"/>' +
-          '<path d="M12 6v6l4 2"/>' +
-        '</svg>' +
-        '<span style="margin-left: 10px; font-weight: 700;">' + widgetData.widget.buttonText + '</span>' +
+        '<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="M12 6v6l4 2"/></svg>' +
+        '<span style="font-weight: 600; font-size: 14px; white-space: nowrap;">Çarkı Çevir!</span>' +
       '</button>' +
     '</div>' +
-      '<div id="carkifelek-modal" style="' + getModalStyles() + '">' +
-        '<div style="' + getModalContentStyles() + '">' +
-          '<button id="carkifelek-close" style="' + getCloseButtonStyles() + '">' +
-            '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#1a1a1a" stroke-width="2.5">' +
-              '<path d="M18 6L6 18M6 6l12 12"/>' +
-            '</svg>' +
-          '</button>' +
-          '<h2 style="' + getTitleStyles() + '">' + widgetData.widget.title + '</h2>' +
-          '<p style="' + getDescriptionStyles() + '">' + widgetData.widget.description + '</p>' +
-          '<div style="position: relative; width: 300px; height: 300px; margin: 20px auto;">' +
-            '<div id="carkifelek-wheel-glow" style="' + getWheelGlowStyles() + '"></div>' +
-            '<canvas id="carkifelek-wheel" width="300" height="300"></canvas>' +
-            '<div id="carkifelek-center" style="' + getCenterStyles() + '">🎁</div>' +
-            '<div id="carkifelek-pointer" style="' + getPointerStyles() + '"></div>' +
+    '<div id="carkifelek-modal" style="' + getModalStyles() + '">' +
+      '<div class="carkifelek-modal-content" style="' + getModalContentStyles(bgStyle) + '">' +
+        '<button id="carkifelek-close" style="' + getCloseButtonStyles() + '">×</button>' +
+
+        // Desktop: Horizontal Layout Wrapper
+        '<div class="carkifelek-layout" style="display: flex; flex-direction: column; align-items: center; gap: 20px; width: 100%;">' +
+
+          // LEFT SIDE - WHEEL
+          '<div class="carkifelek-wheel-side" style="flex-shrink: 0;">' +
+            // 1. WHEEL (Çark)
+            '<div class="wheel-container" style="position: relative; width: min(70vw, 280px); height: min(70vw, 280px); margin: 0 auto; background: url(https://carkifelek.io/cark-circle.png); background-position: center; background-size: cover;">' +
+              // Marker/Arrow
+              '<div style="position: absolute; top: -12px; left: 50%; transform: translateX(-50%); z-index: 20; width: 25px; height: 35px; pointer-events: none;">' +
+                '<div style="width: 35px; height: 35px; box-shadow: 0 2px 2px 0 rgba(0,0,0,0.23); border-radius: 0 50% 50% 50%; transform: rotate(-135deg); background-color: #ffffff; position: absolute; top: 5px; left: 50%; margin-left: -17px;">' +
+                  '<svg x="0px" y="0px" width="12px" height="12px" viewBox="0 0 12 12" style="position: absolute; height: 14px; width: 14px; top: 50%; left: 50%; margin-top: -7px; margin-left: -7px; transform: rotate(135deg);">' +
+                    '<polygon points="7.489 4.667 6 0 4.511 4.667 0 4.667 3.59 7.416 2.101 12 6 9.167 9.899 12 8.41 7.416 12 4.667 7.489 4.667" fill="#ffce01"></polygon>' +
+                  '</svg>' +
+                '</div>' +
+              '</div>' +
+              // Wheel shake wrapper - shake animasyonu burada
+              '<div class="wheel-shake-wrapper" style="position: absolute; top: 0; left: 0; width: 100%; height: 100%; animation: wheel-shake 2s cubic-bezier(0.445, 0.05, 0.55, 0.95) infinite;">' +
+                // SVG Wheel - rotation transform sadece burada
+                '<svg id="carkifelek-wheel" viewBox="0 0 100 100" style="position: absolute; top: 0; left: 0; width: 100%; height: 100%; border-radius: 50%; padding: 12px; transform: rotate(0deg); pointer-events: none; box-shadow: 0 0 10px rgba(0,0,0,0.2); background: url(https://carkifelek.io/asgr04w.jpeg) no-repeat center / contain;"></svg>' +
+              '</div>' +
+              // Center
+              '<div style="position: absolute; width: 15%; height: 15%; background: #fff; border-radius: 50%; top: 50%; left: 50%; transform: translate(-50%, -50%); z-index: 10; box-shadow: 0 0 18px 4px rgba(0,0,0,0.17);">' +
+                '<div style="position: absolute; width: 70%; height: 70%; background: #f0f0f0; border-radius: 50%; top: 50%; left: 50%; transform: translate(-50%, -50%); box-shadow: inset 0 0 5px rgba(0,0,0,0.2);"></div>' +
+              '</div>' +
+            '</div>' +
           '</div>' +
-          '<div id="carkifelek-result" style="' + getResultStyles() + '"></div>' +
-          '<div id="carkifelek-form" style="' + getFormStyles() + '">' +
-            '<input type="text" id="carkifelek-fullname" placeholder="Ad Soyad" style="' + getInputStyles() + '" />' +
-            '<input type="' + inputType + '" id="' + inputId + '" placeholder="' + inputPlaceholder + '" style="' + getInputStyles() + '" />' +
-            '<label style="' + getCheckboxStyles() + '" onclick="toggleConsent(\'kvvk\')">' +
-              '<div id="carkifelek-kvvk-check" style="' + getCheckboxBoxStyles() + '"></div>' +
-              '<span style="' + getCheckboxLabelStyles() + '"><strong>KVKK</strong> bilgilendirme metnini okudum, kabul ediyorum</span>' +
-            '</label>' +
-            '<label style="' + getCheckboxStyles() + '" onclick="toggleConsent(\'eticaret\')">' +
-              '<div id="carkifelek-eticaret-check" style="' + getCheckboxBoxStyles() + '"></div>' +
-              '<span style="' + getCheckboxLabelStyles() + '"><strong>Elektronik Ticari İleti</strong> aydınlatma metnini okudum, kabul ediyorum</span>' +
-            '</label>' +
-            '<div id="carkifelek-consent-error" style="' + getConsentErrorStyles() + '"></div>' +
-            '<button id="carkifelek-spin" style="' + getSpinButtonStyles() + '">' +
-              '<span id="carkifelek-spin-text" style="font-weight: 700; letter-spacing: 0.5px;">ÇEVİR KAZAN</span>' +
-              '<svg id="carkifelek-spin-icon" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" style="margin-left: 6px;"><path d="M21 12a9 9 0 11-6.21-17.67"/><path d="M21 3v9h-9"/></svg>' +
-            '</button>' +
-            '<p style="font-size: 12px; color: #9ca3af; text-align: center; margin-top: 12px; font-weight: 500;">' +
-              '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#25D366" stroke-width="2" style="vertical-align: middle; margin-right: 4px;"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0110 0v4"/></svg>' +
-              'Verileriniz güvende' +
-            '</p>' +
-          '</div>' +
-          '<div id="carkifelek-success" style="' + getSuccessStyles() + '">' +
-            '<div style="font-size: 56px; margin-bottom: 12px;">🎉</div>' +
-            '<h3 style="font-size: 22px; font-weight: 800; margin-bottom: 8px; background: linear-gradient(135deg, #25D366, #128C7E); -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text;">TEBRİKLER!</h3>' +
-            '<div id="carkifelek-prize-name" style="font-size: 18px; color: #25D366; font-weight: 700; margin-bottom: 12px;"></div>' +
-            '<div id="carkifelek-coupon" style="' + getCouponStyles() + '"></div>' +
-            '<button id="carkifelek-close-success" style="' + getCloseSuccessButtonStyles() + '">Kapat</button>' +
+
+          // RIGHT SIDE - FORM
+          '<div class="carkifelek-form-side" style="width: 100%; max-width: 320px;">' +
+            // 2. TITLE (Başlık)
+            '<div style="text-align: center; margin-bottom: 5px;">' +
+              '<h2 style="color: ' + (widgetData.widget.titleColor || '#fff') + '; font-size: 18px; font-weight: 700; margin: 0;">' + widgetData.widget.title + '</h2>' +
+            '</div>' +
+
+            // 3. DESCRIPTION (Açıklama)
+            '<div style="text-align: center; margin-bottom: 12px;">' +
+              '<p style="color: ' + (widgetData.widget.descriptionColor || '#fff') + '; font-size: 12px; margin: 0; opacity: 0.9;">' + widgetData.widget.description + '</p>' +
+            '</div>' +
+
+            // 4. FORM CONTENT (Dynamic based on spin state)
+            formContent +
+
+            // 5. BUTTON CONTENT (Dynamic based on spin state)
+            buttonContent +
+
+        // Success Modal - Monochrome Premium Design
+        '<div id="carkifelek-prize-modal" style="display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.8); backdrop-filter: blur(4px); z-index: 99999; align-items: center; justify-content: center; opacity: 0; transition: opacity 0.3s;">' +
+          '<div style="background: linear-gradient(145deg, #ffffff 0%, #f8f8f8 100%); width: 90%; max-width: 340px; border-radius: 20px; padding: 0; text-align: center; position: relative; box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.5), 0 0 0 1px rgba(0,0,0,0.05); transform: scale(0.9); animation: modalAppear 0.4s cubic-bezier(0.34, 1.56, 0.64, 1) forwards; overflow: hidden;">' +
+            // Header with confetti decoration
+            '<div style="background: linear-gradient(135deg, #1a1a1a 0%, #2d2d2d 100%); padding: 25px 20px 20px; position: relative;">' +
+              '<div style="position: absolute; top: 10px; left: 50%; transform: translateX(-50%); width: 40px; height: 4px; background: rgba(255,255,255,0.2); border-radius: 2px;"></div>' +
+              '<div style="font-size: 28px; margin-bottom: 5px;">🎉</div>' +
+              '<h2 style="color: #ffffff; font-size: 20px; margin: 0; font-weight: 600; letter-spacing: 0.5px;">Tebrikler!</h2>' +
+            '</div>' +
+            // Prize info
+            '<div style="padding: 20px;">' +
+              '<div style="background: linear-gradient(135deg, #f5f5f5 0%, #ebebeb 100%); border-radius: 12px; padding: 18px; margin-bottom: 16px; border: 1px solid rgba(0,0,0,0.08);">' +
+                '<div id="carkifelek-prize-name" style="font-size: 20px; font-weight: 700; color: #1a1a1a; margin-bottom: 6px;"></div>' +
+                '<div id="carkifelek-prize-desc" style="font-size: 14px; color: #666;"></div>' +
+              '</div>' +
+              // Coupon section
+              '<div id="carkifelek-coupon-container" style="background: #1a1a1a; border-radius: 12px; padding: 16px; margin-bottom: 16px; position: relative;">' +
+                '<div style="position: absolute; top: -8px; left: 20px; background: #1a1a1a; padding: 0 8px; font-size: 10px; color: #888; text-transform: uppercase; letter-spacing: 1px;">Kupon Kodu</div>' +
+                '<div style="border: 1px dashed rgba(255,255,255,0.3); padding: 12px; border-radius: 8px; background: rgba(255,255,255,0.05);">' +
+                  '<div id="carkifelek-coupon-code" style="font-size: 22px; font-weight: 700; color: #ffffff; letter-spacing: 2px; font-family: \'Courier New\', monospace;"></div>' +
+                '</div>' +
+                '<button id="carkifelek-copy-coupon" style="background: rgba(255,255,255,0.1); color: #fff; border: 1px solid rgba(255,255,255,0.2); padding: 10px 16px; border-radius: 8px; margin-top: 12px; cursor: pointer; font-size: 13px; display: inline-flex; align-items: center; gap: 6px; transition: all 0.2s; width: 100%; justify-content: center;"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"/><path d="M5 15H4a2 2 0 01-2-2V4a2 2 0 012-2h9a2 2 0 012 2v1"/></svg> Kodu Kopyala</button>' +
+              '</div>' +
+              // Buttons
+              '<div style="display: flex; gap: 10px;">' +
+                '<a id="carkifelek-product-link" href="#" target="_blank" style="flex: 1; padding: 14px 16px; border-radius: 10px; font-size: 14px; cursor: pointer; text-align: center; text-decoration: none; font-weight: 600; background: linear-gradient(135deg, #1a1a1a 0%, #333 100%); color: white; box-shadow: 0 4px 12px rgba(0,0,0,0.2); transition: all 0.2s;">Alışverişe Başla</a>' +
+                '<button id="carkifelek-close-prize" style="flex: 1; padding: 14px 16px; border-radius: 10px; font-size: 14px; cursor: pointer; text-align: center; font-weight: 600; background: #f5f5f5; color: #555; border: 1px solid #e0e0e0; transition: all 0.2s;">Kapat</button>' +
+              '</div>' +
+            '</div>' +
           '</div>' +
         '</div>' +
-      '</div>';
+      '</div>' +
+    '</div>' +
+  '</div>' +
+'</div>';
   }
 
   // ============================================
-  // STYLES - WHATSAPP GREEN PREMIUM
+  // STYLES - RED PREMIUM DESIGN
   // ============================================
 
   function getWidgetStyles() {
-    return 'position: fixed; bottom: 20px; right: 20px; z-index: 999999;' +
-           'opacity: 0; transform: translateY(20px); transition: all 0.4s cubic-bezier(0.23, 1, 0.32, 1);';
+    return 'position: fixed; top: 50%; right: 0; transform: translateY(-50%); z-index: 999999;' +
+           'opacity: 0; transition: all 0.4s cubic-bezier(0.23, 1, 0.32, 1);';
   }
 
   function getToggleButtonStyles() {
-    return 'background: linear-gradient(135deg, #25D366 0%, #128C7E 100%);' +
-           'color: white; border: none; padding: 14px 24px; border-radius: 50px;' +
-           'font-size: 14px; font-weight: 700; cursor: pointer;' +
-           'box-shadow: 0 10px 40px rgba(37, 211, 102, 0.4);' +
-           'display: flex; align-items: center; transition: all 0.3s cubic-bezier(0.23, 1, 0.32, 1);' +
+    return 'background: #1a1a1a;' +
+           'color: white; border: none; padding: 12px 20px; border-radius: 12px 0 0 12px;' +
+           'font-size: 14px; font-weight: 600; cursor: pointer;' +
+           'box-shadow: -4px 4px 20px rgba(0, 0, 0, 0.3);' +
+           'display: flex; align-items: center; justify-content: center; gap: 8px;' +
+           'min-height: 50px;' +
+           'position: relative; overflow: hidden;' +
+           'transition: all 0.3s;' +
            'font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;' +
-           'text-transform: uppercase; letter-spacing: 0.5px;';
+           'transform: rotate(-0.25turn); transform-origin: right center;';
   }
 
   function getModalStyles() {
     return 'position: fixed; top: 0; left: 0; right: 0; bottom: 0;' +
-           'background: rgba(0,0,0,0.4); backdrop-filter: blur(8px);' +
+           'background: rgba(0,0,0,0.7);' +
            'display: none; justify-content: center; align-items: center;' +
-           'z-index: 1000000; animation: fadeIn 0.3s ease;';
+           'z-index: 1000000; overflow-y: auto;' +
+           'animation: fadeIn 0.3s ease;';
   }
 
-  function getModalContentStyles() {
-    return 'background: #ffffff;' +
-           'border-radius: 20px; padding: 32px 28px 28px 28px; max-width: 420px; width: 90%;' +
-           'box-shadow: 0 25px 50px -12px rgba(0,0,0,0.25), 0 0 0 1px rgba(0,0,0,0.05);' +
-           'position: relative; overflow: hidden;' +
-           'font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;';
+  function getModalContentStyles(bgStyle) {
+    return 'background: ' + bgStyle + ';' +
+           'border-radius: 15px; max-width: 900px; width: 95%;' +
+           'margin: 20px auto; overflow: hidden; position: relative;' +
+           'padding: 25px;' +
+           'font-family: "Poppins", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;';
   }
 
   function getCloseButtonStyles() {
-    return 'position: absolute; top: 16px; right: 16px; z-index: 10;' +
-           'background: #1a1a1a; border: none; border-radius: 50%;' +
-           'color: #ffffff; width: 40px; height: 40px; cursor: pointer;' +
+    return 'position: absolute; top: 10px; right: 10px;' +
+           'background: rgba(0,0,0,0.1); border: 1px solid #fff;' +
+           'width: 30px; height: 30px; border-radius: 50%;' +
            'display: flex; align-items: center; justify-content: center;' +
-           'transition: all 0.2s ease; opacity: 0.8;' +
-           'box-shadow: 0 4px 12px rgba(0,0,0,0.15);';
-  }
-
-  function getTitleStyles() {
-    return 'color: #1a1a1a;' +
-           'font-size: 28px; font-weight: 900; text-align: center;' +
-           'margin: 0 0 8px 0; letter-spacing: -0.5px; line-height: 1.2;' +
-           'background: linear-gradient(135deg, #25D366 0%, #128C7E 100%);' +
-           '-webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text;';
-  }
-
-  function getDescriptionStyles() {
-    return 'color: #666666;' +
-           'font-size: 15px; line-height: 1.5; text-align: center;' +
-           'margin: 0 0 16px 0; font-weight: 500;';
-  }
-
-  function getWheelGlowStyles() {
-    return 'position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%);' +
-           'width: 280px; height: 280px; border-radius: 50%;' +
-           'background: radial-gradient(circle, rgba(37, 211, 102, 0.2) 0%, transparent 70%);' +
-           'pointer-events: none;';
-  }
-
-  function getPointerStyles() {
-    return 'position: absolute; top: 50%; right: -12px;' +
-           'transform: translateY(-50%); width: 0; height: 0;' +
-           'border-left: 24px solid #1a1a1a; border-top: 14px solid transparent;' +
-           'border-bottom: 14px solid transparent;' +
-           'filter: drop-shadow(0 2px 8px rgba(0,0,0,0.3));' +
-           'z-index: 10;';
-  }
-
-  function getCenterStyles() {
-    return 'position: absolute; top: 50%; left: 50%;' +
-           'transform: translate(-50%, -50%);' +
-           'width: 72px; height: 72px; border-radius: 50%;' +
-           'background: linear-gradient(135deg, #ffffff 0%, #f0f0f0 100%);' +
-           'display: flex; align-items: center; justify-content: center;' +
-           'font-size: 32px; box-shadow: 0 4px 20px rgba(0,0,0,0.1);' +
-           'z-index: 5;';
-  }
-
-  function getResultStyles() {
-    return 'min-height: 24px; margin: 16px 0; color: #25D366; font-weight: 700;' +
-           'font-size: 14px; text-align: center;';
-  }
-
-  function getFormStyles() {
-    return 'margin-top: 16px; display: flex; flex-direction: column; gap: 12px;';
+           'font-size: 20px; color: #fff; cursor: pointer; z-index: 100;' +
+           'transition: all 0.2s;';
   }
 
   function getInputStyles() {
-    return 'width: 100%; padding: 14px 16px; border: 2px solid #e5e7eb;' +
-           'border-radius: 12px; font-size: 15px; color: #1a1a1a;' +
-           'background: #f9fafb; outline: none; transition: all 0.2s ease;' +
-           'font-family: inherit; font-weight: 500;';
+    return 'width: 100%; padding: 10px 10px 10px 40px;' +
+           'border: 1px solid rgb(80 80 80 / 27%); border-radius: 6px;' +
+           'background: rgb(255 255 255); color: #3f3f3f;' +
+           'font-size: 13px; outline: none; transition: all 0.3s;';
   }
 
   function getCheckboxStyles() {
-    return 'display: flex; align-items: flex-start; gap: 10px; padding: 10px 12px;' +
-           'border: 2px solid #e5e7eb; border-radius: 10px; cursor: pointer;' +
-           'background: #f9fafb; transition: all 0.2s ease; user-select: none;';
-  }
-
-  function getCheckboxBoxStyles() {
-    return 'flex-shrink-0; width: 18px; height: 18px; min-width: 18px; border: 2px solid #d1d5db;' +
-           'border-radius: 4px; display: flex; align-items: center; justify-content: center;' +
-           'transition: all 0.15s ease; background: #ffffff;';
-  }
-
-  function getCheckboxLabelStyles() {
-    return 'font-size: 12px; line-height: 1.4; color: #4b5563; flex: 1;';
-  }
-
-  function getConsentErrorStyles() {
-    return 'font-size: 11px; color: #ef4444; font-weight: 600; margin-top: -8px; margin-bottom: 4px;' +
-           'display: none; padding-left: 28px;';
+    return 'display: flex; align-items: flex-start; gap: 10px;' +
+           'border: dotted rgba(255,255,255,0.5) 1px; border-radius: 7px;' +
+           'padding: 10px; cursor: pointer; margin-top: 5px;';
   }
 
   function getSpinButtonStyles() {
-    var bgColor = widgetData.widget.buttonColor || '#25D366';
-    return 'width: 100%; padding: 14px 24px; border-radius: 12px;' +
-           'background: ' + bgColor + '; color: #ffffff;' +
-           'font-size: 16px; font-weight: 700; cursor: pointer; border: none;' +
-           'display: flex; align-items: center; justify-content: center;' +
-           'box-shadow: 0 6px 20px rgba(37, 211, 102, 0.35);' +
-           'transition: all 0.3s cubic-bezier(0.23, 1, 0.32, 1);' +
-           'font-family: inherit; text-transform: uppercase; letter-spacing: 0.5px;';
-  }
-
-  function getSuccessStyles() {
-    return 'display: none; text-align: center; padding: 20px;';
-  }
-
-  function getCouponStyles() {
-    return 'background: linear-gradient(135deg, rgba(37, 211, 102, 0.08) 0%, rgba(37, 211, 102, 0.12) 100%);' +
-           'padding: 12px 20px; border-radius: 12px; margin: 16px 0;' +
-           'font-family: "SF Mono", "Monaco", "Inconsolata", monospace;' +
-           'font-size: 14px; letter-spacing: 0.5px; color: #25D366;' +
-           'border: 1px solid rgba(37, 211, 102, 0.25); font-weight: 600;';
-  }
-
-  function getCloseSuccessButtonStyles() {
-    return 'background: #f9fafb; border: 1px solid #e5e7eb; color: #1a1a1a;' +
-           'padding: 12px 28px; border-radius: 10px; font-size: 14px; font-weight: 700;' +
-           'cursor: pointer; transition: all 0.2s ease; margin-top: 16px;' +
-           'text-transform: uppercase; letter-spacing: 0.5px;';
+    var bgColor = widgetData.widget.buttonColor || '#d10000';
+    var textColor = widgetData.widget.buttonTextColor || '#ffffff';
+    return 'display: block; position: relative; overflow: hidden;' +
+           'width: 100%; padding: 15px; border: none; border-radius: 10px;' +
+           'background: ' + bgColor + '; color: ' + textColor + ';' +
+           'font-size: 16px; font-weight: 600; cursor: pointer;' +
+           'transition: all 0.3s; text-decoration: none;';
   }
 
   // ============================================
-  // WHEEL DRAWING WITH PRIZE NAMES (RADIAL ALIGNMENT)
+  // WHEEL SVG GENERATION
   // ============================================
 
-  function drawWheel() {
-    var canvas = document.getElementById('carkifelek-wheel');
-    if (!canvas || !widgetData || !widgetData.prizes) return;
+  function generateWheelSVG() {
+    var svg = document.getElementById('carkifelek-wheel');
+    if (!svg || !widgetData || !widgetData.prizes || widgetData.prizes.length === 0) return;
 
-    wheelCanvas = canvas;
-    wheelContext = canvas.getContext('2d');
-
-    var centerX = canvas.width / 2;
-    var centerY = canvas.height / 2;
-    var radius = canvas.width / 2 - 24;
+    var centerX = 50;
+    var centerY = 50;
+    var radius = 45;
     var numPrizes = widgetData.prizes.length;
-    var arcSize = (2 * Math.PI) / numPrizes;
+    var anglePerPrize = 360 / numPrizes;
 
-    // Clear canvas
-    wheelContext.clearRect(0, 0, canvas.width, canvas.height);
+    var svgContent = '';
 
-    // Add spinning glow effect
-    if (isSpinning) {
-      var glowIntensity = Math.sin(Date.now() / 100) * 0.3 + 0.7;
-      wheelContext.save();
-      wheelContext.beginPath();
-      wheelContext.arc(centerX, centerY, radius + 20, 0, 2 * Math.PI);
-      wheelContext.fillStyle = 'rgba(37, 211, 102, ' + (0.2 * glowIntensity) + ')';
-      wheelContext.fill();
-      wheelContext.restore();
+    // Metin kısaltma fonksiyonu
+    function truncateText(text, maxChars) {
+      if (text.length <= maxChars) return text;
+      return text.substring(0, maxChars - 2) + '..';
     }
 
-    // Save context for rotation
-    wheelContext.save();
-    wheelContext.translate(centerX, centerY);
-    wheelContext.rotate(currentRotation * Math.PI / 180);
-    wheelContext.translate(-centerX, -centerY);
-
-    // Draw outer dots (decorative)
-    var dotCount = 48;
-    var dotRadius = radius + 14;
-    for (var i = 0; i < dotCount; i++) {
-      var angle = (i / dotCount) * 2 * Math.PI;
-      var x = centerX + Math.cos(angle) * dotRadius;
-      var y = centerY + Math.sin(angle) * dotRadius;
-
-      wheelContext.beginPath();
-      wheelContext.arc(x, y, 2.5, 0, 2 * Math.PI);
-      wheelContext.fillStyle = isSpinning ? '#25D366' : '#ffffff';
-      wheelContext.fill();
+    // Dilim açısına göre maksimum karakter sayısı
+    function getMaxChars(angle) {
+      // Dar açılar için daha az karakter
+      if (angle <= 30) return 6;
+      if (angle <= 45) return 8;
+      if (angle <= 60) return 10;
+      if (angle <= 90) return 12;
+      return 14;
     }
 
-    // Draw slices
     for (var i = 0; i < numPrizes; i++) {
       var prize = widgetData.prizes[i];
-      var startAngle = i * arcSize - Math.PI / 2;
-      var endAngle = startAngle + arcSize - 0.05;
+      var startAngle = i * anglePerPrize;
+      var endAngle = (i + 1) * anglePerPrize;
+      var startRad = (startAngle - 90) * Math.PI / 180;
+      var endRad = (endAngle - 90) * Math.PI / 180;
 
-      // Draw segment path
-      wheelContext.beginPath();
-      wheelContext.moveTo(centerX, centerY);
-      wheelContext.arc(centerX, centerY, radius, startAngle, endAngle);
-      wheelContext.closePath();
+      var x1 = centerX + radius * Math.cos(startRad);
+      var y1 = centerY + radius * Math.sin(startRad);
+      var x2 = centerX + radius * Math.cos(endRad);
+      var y2 = centerY + radius * Math.sin(endRad);
 
-      // Gradient fill
-      var gradient = wheelContext.createRadialGradient(centerX, centerY, 0, centerX, centerY, radius);
-      gradient.addColorStop(0, lightenColor(prize.color, 35));
-      gradient.addColorStop(0.6, prize.color);
-      gradient.addColorStop(1, prize.color);
-      wheelContext.fillStyle = gradient;
-      wheelContext.fill();
+      // Dilim yolu
+      var pathData = 'M ' + centerX + ',' + centerY + ' L ' + x1 + ',' + y1 + ' A ' + radius + ',' + radius + ' 0 0,1 ' + x2 + ',' + y2 + ' Z';
 
-      // Segment border
-      wheelContext.strokeStyle = 'rgba(255,255,255,0.4)';
-      wheelContext.lineWidth = 2;
-      wheelContext.stroke();
+      // Metin pozisyonu - biraz daha merkeze yakın
+      var textRadius = radius * 0.58;
+      var textAngle = startAngle + anglePerPrize / 2;
+      var textRad = (textAngle - 90) * Math.PI / 180;
+      var textX = centerX + textRadius * Math.cos(textRad);
+      var textY = centerY + textRadius * Math.sin(textRad);
 
-      // Draw prize name (radially aligned)
-      drawPrizeName(prize.name, startAngle, endAngle, centerX, centerY, radius * 0.70, prize.color);
+      // Metni kısalt
+      var maxChars = getMaxChars(anglePerPrize);
+      var displayText = truncateText(prize.name || '', maxChars);
+
+      // Font boyutunu açıya göre ayarla
+      var fontSize = anglePerPrize <= 30 ? 2.5 : (anglePerPrize <= 45 ? 2.8 : 3);
+
+      svgContent += '<path d="' + pathData + '" fill="' + (prize.color || '#ff0000') + '" stroke="white" stroke-width="0.3" />';
+      svgContent += '<text x="' + textX + '" y="' + textY + '" fill="white" font-size="' + fontSize + '" text-anchor="middle" dominant-baseline="middle" transform="rotate(' + (textAngle - 90) + ', ' + textX + ', ' + textY + ')" style="font-weight: 700;">' + displayText + '</text>';
     }
 
-    // Inner dashed circle
-    wheelContext.beginPath();
-    wheelContext.arc(centerX, centerY, radius * 0.38, 0, 2 * Math.PI);
-    wheelContext.strokeStyle = '#1a1a1a';
-    wheelContext.lineWidth = 2;
-    wheelContext.setLineDash([6, 6]);
-    wheelContext.stroke();
-    wheelContext.setLineDash([]);
-
-    // Center white circle
-    wheelContext.beginPath();
-    wheelContext.arc(centerX, centerY, 38, 0, 2 * Math.PI);
-    var centerGradient = wheelContext.createRadialGradient(centerX, centerY, 0, centerX, centerY, 38);
-    centerGradient.addColorStop(0, '#ffffff');
-    centerGradient.addColorStop(1, '#f5f5f5');
-    wheelContext.fillStyle = centerGradient;
-    wheelContext.fill();
-
-    // Center icon
-    wheelContext.fillStyle = '#25D366';
-    wheelContext.font = 'bold 28px -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif';
-    wheelContext.textAlign = 'center';
-    wheelContext.textBaseline = 'middle';
-    wheelContext.fillText('🎁', centerX, centerY);
-
-    wheelContext.restore();
-  }
-
-  function drawPrizeName(name, startAngle, endAngle, centerX, centerY, radius, color) {
-    var midAngle = startAngle + (endAngle - startAngle) / 2;
-    var textX = centerX + Math.cos(midAngle) * radius;
-    var textY = centerY + Math.sin(midAngle) * radius;
-
-    wheelContext.save();
-    wheelContext.translate(textX, textY);
-    // Radial alignment: text reads outward from center
-    wheelContext.rotate(midAngle);
-
-    // Text shadow for readability
-    wheelContext.shadowColor = 'rgba(0,0,0,0.6)';
-    wheelContext.shadowBlur = 4;
-    wheelContext.shadowOffsetX = 0;
-    wheelContext.shadowOffsetY = 1;
-
-    // Font settings
-    wheelContext.font = 'bold 11px -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif';
-    wheelContext.textAlign = 'center';
-    wheelContext.textBaseline = 'middle';
-
-    // Text color based on segment brightness
-    wheelContext.fillStyle = getContrastColor(color);
-
-    // Truncate long names
-    var maxLength = 12;
-    var displayName = name.length > maxLength ? name.substring(0, maxLength - 2) + '..' : name;
-
-    wheelContext.fillText(displayName, 0, 0);
-    wheelContext.restore();
+    svg.innerHTML = svgContent;
   }
 
   // ============================================
@@ -649,263 +640,134 @@
     if (isSpinning) return;
     isSpinning = true;
 
+    var svg = document.getElementById('carkifelek-wheel');
+    var wheelContainer = document.querySelector('.wheel-container');
+    if (!svg) {
+      isSpinning = false;
+      return;
+    }
+
+    // Stop idle animations
+    if (wheelContainer) {
+      wheelContainer.classList.add('spinning');
+    }
+    svg.style.animation = 'none';
+    svg.style.transition = 'none';
+
+    // Force reflow
+    void svg.offsetWidth;
+
     var prizeIndex = widgetData.prizes.indexOf(prize);
     var numPrizes = widgetData.prizes.length;
-    var arcSize = (2 * Math.PI) / numPrizes;
-    var prizeAngle = prizeIndex * arcSize + arcSize / 2;
+    var prizeAngle = 360 / numPrizes;
+    var targetAngle = (360 - (prizeIndex * prizeAngle)) - (prizeAngle / 2);
+    var rotations = 5;
+    var totalRotation = currentRotation + (rotations * 360) + targetAngle;
+    currentRotation = totalRotation;
 
-    // Calculate rotation to land on prize - smoother but shorter
-    var rotations = 4;
-    var targetAngle = 360 * rotations + (360 - prizeAngle * 180 / Math.PI) + 90;
-    var duration = 3000; // 3 seconds
-    var startTime = Date.now();
+    // Apply transition and rotation
+    svg.style.transition = 'transform 5s cubic-bezier(.17,.67,.12,.99)';
+    svg.style.transform = 'rotate(' + totalRotation + 'deg)';
 
-    function animate() {
-      var elapsed = Date.now() - startTime;
-      var progress = Math.min(elapsed / duration, 1);
-
-      // Ease out cubic - smooth deceleration
-      var easeOut = 1 - Math.pow(1 - progress, 3);
-
-      currentRotation = targetAngle * easeOut;
-
-      drawWheel();
-
-      if (progress < 1) {
-        requestAnimationFrame(animate);
-      } else {
-        isSpinning = false;
-        triggerConfetti();
-        showSuccess(prize, fullName, contact);
-      }
-    }
-
-    animate();
-  }
-
-  // Confetti effect function
-  function triggerConfetti() {
-    var colors = ['#25D366', '#128C7E', '#FFD700', '#FF6B6B', '#4ECDC4', '#45B7D1'];
-    var confettiCount = 100;
-    var container = document.getElementById('carkifelek-modal');
-
-    if (!container) return;
-
-    for (var i = 0; i < confettiCount; i++) {
-      createConfetti(container, colors);
-    }
-  }
-
-  function createConfetti(container, colors) {
-    var confetti = document.createElement('div');
-    var color = colors[Math.floor(Math.random() * colors.length)];
-    var startX = Math.random() * 100;
-    var endX = startX + (Math.random() - 0.5) * 100;
-    var rotation = Math.random() * 720;
-    var duration = 2000 + Math.random() * 1000;
-    var size = 5 + Math.random() * 10;
-
-    confetti.style.cssText =
-      'position: absolute;' +
-      'left: ' + startX + '%;' +
-      'top: 50%;' +
-      'width: ' + size + 'px;' +
-      'height: ' + size + 'px;' +
-      'background: ' + color + ';' +
-      'border-radius: 2px;' +
-      'opacity: 1;' +
-      'transform: rotate(0deg);' +
-      'transition: all ' + duration + 'ms cubic-bezier(0.25, 0.46, 0.45, 0.94);' +
-      'pointer-events: none;' +
-      'z-index: 10000;';
-
-    container.appendChild(confetti);
-
-    // Trigger animation
     setTimeout(function() {
-      confetti.style.left = endX + '%';
-      confetti.style.top = '120%';
-      confetti.style.transform = 'rotate(' + rotation + 'deg)';
-      confetti.style.opacity = '0';
-    }, 10);
-
-    // Remove from DOM
-    setTimeout(function() {
-      if (confetti.parentNode) {
-        confetti.parentNode.removeChild(confetti);
+      isSpinning = false;
+      // Re-enable pulse animation on container (but not shake)
+      if (wheelContainer) {
+        wheelContainer.classList.remove('spinning');
       }
-    }, duration);
+      // Permanently disable shake animation on wrapper - keep wheel at final position
+      var shakeWrapper = document.querySelector('.wheel-shake-wrapper');
+      if (shakeWrapper) {
+        shakeWrapper.style.animation = 'none';
+      }
+
+      // Save spin data to localStorage (24 hour limit)
+      saveSpinData(prize, fullName, contact);
+
+      // Log to database
+      logSpin(prize.id, fullName, contact);
+
+      showPrizeModal(prize, fullName, contact);
+    }, 5000);
   }
 
-  function showResult(message, color) {
-    var resultEl = document.getElementById('carkifelek-result');
-    var consentErrorEl = document.getElementById('carkifelek-consent-error');
-
-    if (resultEl) {
-      resultEl.innerHTML = message;
-      resultEl.style.color = color || '#25D366';
-    }
-
-    if (consentErrorEl) {
-      consentErrorEl.style.display = 'none';
-    }
-  }
-
-  function showSuccess(prize, fullName, contact) {
-    var formEl = document.getElementById('carkifelek-form');
-    var resultEl = document.getElementById('carkifelek-result');
-    var successEl = document.getElementById('carkifelek-success');
+  function showPrizeModal(prize, fullName, contact) {
+    var modal = document.getElementById('carkifelek-prize-modal');
     var prizeNameEl = document.getElementById('carkifelek-prize-name');
-    var couponEl = document.getElementById('carkifelek-coupon');
+    var prizeDescEl = document.getElementById('carkifelek-prize-desc');
+    var couponEl = document.getElementById('carkifelek-coupon-code');
+    var couponContainer = document.getElementById('carkifelek-coupon-container');
+    var productLink = document.getElementById('carkifelek-product-link');
 
-    // Hide form and result
-    if (formEl) formEl.style.display = 'none';
-    if (resultEl) resultEl.style.display = 'none';
+    if (prizeNameEl) prizeNameEl.textContent = prize.name;
+    if (prizeDescEl) prizeDescEl.textContent = prize.description || '';
 
-    // Show success with animation
-    if (successEl) {
-      successEl.style.display = 'block';
-      successEl.style.opacity = '0';
-      successEl.style.transform = 'scale(0.8)';
-
-      setTimeout(function() {
-        successEl.style.transition = 'all 0.5s cubic-bezier(0.34, 1.56, 0.64, 1)';
-        successEl.style.opacity = '1';
-        successEl.style.transform = 'scale(1)';
-      }, 50);
+    // Show coupon code - use first code if multiple
+    if (prize.coupon_codes && prize.coupon_codes.trim() !== '') {
+      var codes = prize.coupon_codes.split('\n').filter(function(c) { return c.trim(); });
+      if (couponEl) couponEl.textContent = codes[0] || prize.coupon_codes;
+      if (couponContainer) couponContainer.style.display = 'block';
+    } else {
+      if (couponContainer) couponContainer.style.display = 'none';
     }
 
-    // Animate prize name
-    if (prizeNameEl) {
-      prizeNameEl.textContent = prize.name;
-      prizeNameEl.style.opacity = '0';
-      prizeNameEl.style.transform = 'translateY(20px)';
+    // Set product link
+    if (productLink && prize.redirect_url) {
+      productLink.href = prize.redirect_url;
+    } else if (productLink) {
+      productLink.href = widgetData.shop.url || '#';
+    }
 
+    // Show modal
+    if (modal) {
+      modal.style.display = 'flex';
       setTimeout(function() {
-        prizeNameEl.style.transition = 'all 0.4s ease-out';
-        prizeNameEl.style.opacity = '1';
-        prizeNameEl.style.transform = 'translateY(0)';
+        modal.style.opacity = '1';
+      }, 10);
+    }
+  }
+
+  function showSavedPrize() {
+    if (savedSpinData && savedSpinData.prize) {
+      showPrizeModal(savedSpinData.prize, savedSpinData.fullName, savedSpinData.contact);
+    }
+  }
+
+  function closePrizeModal() {
+    var modal = document.getElementById('carkifelek-prize-modal');
+    if (modal) {
+      modal.style.opacity = '0';
+      setTimeout(function() {
+        modal.style.display = 'none';
       }, 300);
     }
 
-    // Show coupon code with animation
-    if (couponEl && prize.coupon_codes) {
-      couponEl.textContent = '🎟️ KOD: ' + prize.coupon_codes;
-      couponEl.style.display = 'block';
-      couponEl.style.opacity = '0';
-      couponEl.style.transform = 'scale(0.9)';
-
-      setTimeout(function() {
-        couponEl.style.transition = 'all 0.3s ease-out';
-        couponEl.style.opacity = '1';
-        couponEl.style.transform = 'scale(1)';
-      }, 500);
-    } else {
-      if (couponEl) couponEl.style.display = 'none';
-    }
-
-    // Log to database
-    logSpin(prize.id, fullName, contact);
-  }
-
-  function resetWidget() {
-    var formEl = document.getElementById('carkifelek-form');
-    var resultEl = document.getElementById('carkifelek-result');
-    var successEl = document.getElementById('carkifelek-success');
-    var fullNameInput = document.getElementById('carkifelek-fullname');
-    var isPhone = widgetData.shop.contactInfoType === 'phone';
-    var inputId = isPhone ? 'carkifelek-phone' : 'carkifelek-email';
-    var contactInput = document.getElementById(inputId);
-    var spinBtn = document.getElementById('carkifelek-spin');
-
-    // Reset checkboxes
-    window.widgetConsents = [];
-
-    updateCheckbox('kvvk', false);
-    updateCheckbox('eticaret', false);
-
-    var consentErrorEl = document.getElementById('carkifelek-consent-error');
-    if (consentErrorEl) consentErrorEl.style.display = 'none';
-
-    if (formEl) formEl.style.display = 'flex';
-    if (resultEl) {
-      resultEl.innerHTML = '';
-      resultEl.style.display = 'block';
-    }
-    if (successEl) successEl.style.display = 'none';
-    if (fullNameInput) {
-      fullNameInput.value = '';
-      fullNameInput.disabled = false;
-    }
-    if (contactInput) {
-      contactInput.value = '';
-      contactInput.disabled = false;
-    }
-    if (spinBtn) {
-      spinBtn.disabled = false;
-      spinBtn.innerHTML = '<span id="carkifelek-spin-text" style="font-weight: 700; letter-spacing: 0.5px;">ÇEVİR KAZAN</span>' +
-        '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" style="margin-left: 6px;"><path d="M21 12a9 9 0 11-6.21-17.67"/><path d="M21 3v9h-9"/></svg>';
-    }
-
-    // Reset input borders
-    resetInputBorder('carkifelek-fullname');
-    resetInputBorder(inputId);
-
-    currentRotation = 0;
-    drawWheel();
-  }
-
-  function resetInputBorder(inputId) {
-    var input = document.getElementById(inputId);
-    if (input) {
-      input.style.borderColor = '#e5e7eb';
-      input.style.background = '#f9fafb';
-      input.style.boxShadow = 'none';
+    // Close main modal
+    var mainModal = document.getElementById('carkifelek-modal');
+    if (mainModal) {
+      mainModal.style.display = 'none';
     }
   }
 
-  function updateCheckbox(type, checked) {
-    var checkEl = document.getElementById('carkifelek-' + type + '-check');
-    if (!checkEl) return;
+  function copyCouponCode() {
+    var couponEl = document.getElementById('carkifelek-coupon-code');
+    var copyBtn = document.getElementById('carkifelek-copy-coupon');
 
-    if (checked) {
-      checkEl.innerHTML = '<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="3.5"><path d="M20 6L9 17l-5-5"/></svg>';
-      checkEl.style.background = '#25D366';
-      checkEl.style.borderColor = '#25D366';
-    } else {
-      checkEl.innerHTML = '';
-      checkEl.style.background = '#ffffff';
-      checkEl.style.borderColor = '#d1d5db';
+    if (couponEl && couponEl.textContent) {
+      navigator.clipboard.writeText(couponEl.textContent).then(function() {
+        if (copyBtn) {
+          copyBtn.innerHTML = '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20 6L9 17l-5-5"/></svg> Kopyalandı!';
+          copyBtn.style.background = 'rgba(255,255,255,0.25)';
+          copyBtn.style.borderColor = 'rgba(255,255,255,0.4)';
+          setTimeout(function() {
+            copyBtn.innerHTML = '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"/><path d="M5 15H4a2 2 0 01-2-2V4a2 2 0 012-2h9a2 2 0 012 2v1"/></svg> Kodu Kopyala';
+            copyBtn.style.background = 'rgba(255,255,255,0.1)';
+            copyBtn.style.borderColor = 'rgba(255,255,255,0.2)';
+          }, 2000);
+        }
+      });
     }
   }
-
-  // Global consent storage
-  window.widgetConsents = [];
-
-  function toggleConsent(type) {
-    if (!window.widgetConsents) window.widgetConsents = [];
-
-    var index = window.widgetConsents.indexOf(type);
-    if (index > -1) {
-      window.widgetConsents.splice(index, 1);
-      updateCheckbox(type, false);
-    } else {
-      window.widgetConsents.push(type);
-      updateCheckbox(type, true);
-    }
-
-    // Clear error if both checked
-    var kvvkChecked = window.widgetConsents.includes('kvvk');
-    var ticaretChecked = window.widgetConsents.includes('eticaret');
-
-    if (kvvkChecked && ticaretChecked) {
-      var errorEl = document.getElementById('carkifelek-consent-error');
-      if (errorEl) errorEl.style.display = 'none';
-    }
-  }
-
-  // Expose toggleConsent globally for inline onclick handlers
-  window.toggleConsent = toggleConsent;
 
   // ============================================
   // EVENT LISTENERS
@@ -916,147 +778,175 @@
     var modal = document.getElementById('carkifelek-modal');
     var closeBtn = document.getElementById('carkifelek-close');
     var spinBtn = document.getElementById('carkifelek-spin');
-    var closeSuccessBtn = document.getElementById('carkifelek-close-success');
+    var viewPrizeBtn = document.getElementById('carkifelek-view-prize');
+    var closePrizeBtn = document.getElementById('carkifelek-close-prize');
+    var copyBtn = document.getElementById('carkifelek-copy-coupon');
+    var productLink = document.getElementById('carkifelek-product-link');
     var isPhone = widgetData.shop.contactInfoType === 'phone';
     var inputId = isPhone ? 'carkifelek-phone' : 'carkifelek-email';
     var contactInput = document.getElementById(inputId);
-    var fullNameInput = document.getElementById('carkifelek-fullname');
 
-    if (!toggleBtn || !modal || !closeBtn || !spinBtn || !contactInput || !fullNameInput) {
+    if (!toggleBtn || !modal || !closeBtn) {
       logError('Bazı elementler bulunamadı');
       return;
     }
 
+    // Generate wheel SVG
+    generateWheelSVG();
+
+    // Toggle button
     toggleBtn.onclick = function() {
       modal.style.display = 'flex';
-      resetWidget();
+      toggleBtn.style.display = 'none';
     };
 
+    // Close button
     closeBtn.onclick = function() {
       modal.style.display = 'none';
+      toggleBtn.style.display = 'flex';
     };
 
-    spinBtn.onclick = function() {
-      var fullName = fullNameInput.value.trim();
-      var contact = contactInput.value.trim();
+    // View Prize button (for users who already spun)
+    if (viewPrizeBtn) {
+      viewPrizeBtn.onclick = function() {
+        showSavedPrize();
+      };
+    }
 
+    // Spin button (only if user hasn't spun yet)
+    if (spinBtn) {
+      spinBtn.onclick = function() {
+        // Check if already spun today
+        if (hasSpunToday) {
+          showSavedPrize();
+          return;
+        }
+
+        var fullNameInput = document.getElementById('carkifelek-fullname');
+        var fullName = fullNameInput ? fullNameInput.value.trim() : '';
+        var contact = contactInput ? contactInput.value.trim() : '';
+
+      // Validate full name
       if (!fullName) {
-        showResult('Lütfen adınızı ve soyadınızı girin 😊', '#ef4444');
-        highlightError('carkifelek-fullname');
+        var errorEl = document.getElementById('carkifelek-email-error');
+        if (errorEl) {
+          errorEl.textContent = 'Lütfen adınızı ve soyadınızı girin';
+          errorEl.style.display = 'block';
+        }
         return;
       }
 
       if (fullName.length < 3) {
-        showResult('Lütfen geçerli bir ad soyad girin (en az 3 karakter) 📝', '#ef4444');
-        highlightError('carkifelek-fullname');
+        var errorEl = document.getElementById('carkifelek-email-error');
+        if (errorEl) {
+          errorEl.textContent = 'Lütfen geçerli bir ad soyad girin (en az 3 karakter)';
+          errorEl.style.display = 'block';
+        }
         return;
       }
 
+      // Validate contact
       if (!contact) {
-        var emptyMsg = isPhone ? 'Lütfen telefon numaranızı girin 😊' : 'Lütfen e-posta adresinizi girin 😊';
-        showResult(emptyMsg, '#ef4444');
-        highlightError(inputId);
+        var errorMsg = isPhone ? 'Lütfen telefon numaranızı girin' : 'Lütfen e-posta adresinizi girin';
+        var errorEl = document.getElementById('carkifelek-email-error');
+        if (errorEl) {
+          errorEl.textContent = errorMsg;
+          errorEl.style.display = 'block';
+        }
         return;
       }
 
       if (isPhone) {
         if (!isValidPhone(contact)) {
-          showResult('Geçerli bir telefon numarası girin 📱 (5XX XXX XX XX)', '#ef4444');
-          highlightError(inputId);
+          var errorEl = document.getElementById('carkifelek-email-error');
+          if (errorEl) {
+            errorEl.textContent = 'Geçerli bir telefon numarası girin';
+            errorEl.style.display = 'block';
+          }
           return;
         }
         contact = formatPhone(contact);
       } else {
         if (!isValidEmail(contact)) {
-          showResult('Geçerli bir e-posta adresi girin 📧', '#ef4444');
-          highlightError(inputId);
+          var errorEl = document.getElementById('carkifelek-email-error');
+          if (errorEl) {
+            errorEl.textContent = 'Lütfen geçerli bir e-posta adresi giriniz.';
+            errorEl.style.display = 'block';
+          }
           return;
         }
       }
 
-      // Check consents
-      var kvvkChecked = window.widgetConsents && window.widgetConsents.includes('kvvk');
-      var ticaretChecked = window.widgetConsents && window.widgetConsents.includes('eticaret');
-
-      if (!kvvkChecked || !ticaretChecked) {
-        showResult('Lütfen zorunlu onayları kabul edin ✓', '#ef4444');
-        var consentErrorEl = document.getElementById('carkifelek-consent-error');
-        if (consentErrorEl) {
-          consentErrorEl.textContent = 'Elektronik ileti onayı gereklidir';
-          consentErrorEl.style.display = 'block';
+      // Check KVKK checkbox
+      var kvvkCheckbox = document.getElementById('carkifelek-kvvk-checkbox');
+      if (!kvvkCheckbox || !kvvkCheckbox.checked) {
+        var errorEl = document.getElementById('carkifelek-email-error');
+        if (errorEl) {
+          errorEl.textContent = 'Devam etmek için izin vermeniz gerekmektedir.';
+          errorEl.style.display = 'block';
         }
         return;
       }
 
+      // Hide error
+      var errorEl = document.getElementById('carkifelek-email-error');
+      if (errorEl) errorEl.style.display = 'none';
+
+      // Check if contact already used
       checkContactUsed(contact, function(err, used) {
         if (err) {
           logError('İletişim kontrol hatası', err);
-          return;
         }
 
         if (used) {
-          var usedMsg = isPhone ? 'Bu telefon numarası ile zaten çark çevirdiniz! 🔄' : 'Bu e-posta ile zaten çark çevirdiniz! 🔄';
-          showResult(usedMsg, '#f59e0b');
+          var usedMsg = isPhone ? 'Bu telefon numarası ile zaten çark çevirdiniz!' : 'Bu e-posta ile zaten çark çevirdiniz!';
+          var errorEl = document.getElementById('carkifelek-email-error');
+          if (errorEl) {
+            errorEl.textContent = usedMsg;
+            errorEl.style.display = 'block';
+          }
           return;
         }
 
-        // All valid, spin the wheel
-        selectedPrize = selectPrize();
-        fullNameInput.disabled = true;
-        contactInput.disabled = true;
+        // Disable form
         spinBtn.disabled = true;
+        spinBtn.innerHTML = '<span style="display: inline-flex; align-items: center; gap: 8px;"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" style="animation: spin 1s linear infinite;"><circle cx="12" cy="12" r="10"/><path d="M12 6v6l4 2"/></svg> DÖNDÜRÜLÜYOR...</span>';
+        if (contactInput) contactInput.disabled = true;
+        var fullNameInput = document.getElementById('carkifelek-fullname');
+        if (fullNameInput) fullNameInput.disabled = true;
 
-        // Show loading state
-        spinBtn.innerHTML = '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" style="animation: spin 1s linear infinite; margin-right: 8px;"><circle cx="12" cy="12" r="10"/><path d="M12 6v6l4 2"/></svg><span style="font-weight: 700;">ÇEVİRİLİYOR...</span>';
-
+        // Select prize and spin
+        selectedPrize = selectPrize();
         spinWheel(selectedPrize, fullName, contact);
       });
-    };
+      };
+    }
 
-    closeSuccessBtn.onclick = function() {
-      modal.style.display = 'none';
-    };
+    // Close prize modal
+    if (closePrizeBtn) {
+      closePrizeBtn.onclick = closePrizeModal;
+    }
 
+    // Copy coupon
+    if (copyBtn) {
+      copyBtn.onclick = copyCouponCode;
+    }
+
+    // Close modal on backdrop click
     modal.onclick = function(e) {
       if (e.target === modal) {
         modal.style.display = 'none';
+        toggleBtn.style.display = 'flex';
       }
     };
 
-    var handleEnterKey = function(e) {
-      if (e.key === 'Enter') {
-        spinBtn.click();
-      }
-    };
-    fullNameInput.addEventListener('keypress', handleEnterKey);
-    contactInput.addEventListener('keypress', handleEnterKey);
-
-    // Input focus handlers
-    fullNameInput.addEventListener('focus', function() {
-      highlightInput('carkifelek-fullname', false);
-    });
-    contactInput.addEventListener('focus', function() {
-      highlightInput(inputId, false);
-    });
-  }
-
-  function highlightError(inputId) {
-    var input = document.getElementById(inputId);
-    if (input) {
-      input.style.borderColor = '#ef4444';
-      input.style.background = '#fef2f2';
-      input.style.boxShadow = '0 0 0 3px rgba(239, 68, 68, 0.1)';
-    }
-  }
-
-  function highlightInput(inputId, isError) {
-    var input = document.getElementById(inputId);
-    if (!input) return;
-
-    if (!isError) {
-      input.style.borderColor = '#e5e7eb';
-      input.style.background = '#f9fafb';
-      input.style.boxShadow = 'none';
+    // Enter key
+    if (contactInput) {
+      contactInput.addEventListener('keypress', function(e) {
+        if (e.key === 'Enter') {
+          spinBtn.click();
+        }
+      });
     }
   }
 
@@ -1126,37 +1016,215 @@
   // Add CSS animations
   var style = document.createElement('style');
   style.textContent = `
+    @import url('https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600;700&display=swap');
+
     @keyframes fadeIn {
       from { opacity: 0; }
       to { opacity: 1; }
     }
     @keyframes spin {
       from { transform: rotate(0deg); }
-      to { transform: rotate(360deg); }
+      to { transform: rotate(720deg); }
     }
-    #carkifelek-widget button:hover {
-      transform: translateY(-2px) scale(1.02) !important;
-      box-shadow: 0 14px 48px rgba(37, 211, 102, 0.5) !important;
+    @keyframes pulse {
+      0% { transform: scale(1); box-shadow: 0 4px 8px rgba(0, 0, 0, 0.3); }
+      50% { transform: scale(1.05); box-shadow: 0 6px 16px rgba(0, 0, 0, 0.4); }
+      100% { transform: scale(1); box-shadow: 0 4px 8px rgba(0, 0, 0, 0.3); }
     }
-    #carkifelek-modal button:hover {
-      transform: scale(1.05);
+    @keyframes modalAppear {
+      to { transform: scale(1); }
     }
-    #carkifelek-close:hover {
-      opacity: 1 !important;
-      transform: scale(1.1) !important;
+    @keyframes spin-shine {
+      0% { left: -120%; opacity: 0; }
+      15% { opacity: 1; }
+      30% { left: 120%; opacity: 0; }
+      100% { left: 120%; opacity: 0; }
     }
-    #carkifelek-fullname:focus,
-    #carkifelek-email:focus,
-    #carkifelek-phone:focus {
-      border-color: #25D366 !important;
-      box-shadow: 0 0 0 3px rgba(37, 211, 102, 0.1), 0 0 0 1px #25D366 !important;
-      background: #ffffff !important;
+
+    #carkifelek-toggle:hover {
+      background: #333 !important;
+    }
+    #carkifelek-toggle:active {
+      transform: rotate(-0.25turn) scale(0.98) !important;
+    }
+
+    /* Toggle button shine effect */
+    #carkifelek-toggle::before {
+      content: "";
+      position: absolute;
+      top: 0;
+      left: -120%;
+      width: 50%;
+      height: 100%;
+      background: linear-gradient(120deg, transparent, rgba(255, 255, 255, 0.45), transparent);
+      opacity: 0.9;
+      transform: skewX(-20deg);
+      animation: toggle-shine 3.5s ease-in-out infinite;
+      pointer-events: none;
+    }
+
+    @keyframes toggle-shine {
+      0% { left: -120%; opacity: 0; }
+      15% { opacity: 1; }
+      30% { left: 120%; opacity: 0; }
+      100% { left: 120%; opacity: 0; }
+    }
+    #carkifelek-spin:hover {
+      background: #b00000 !important;
+      transform: translateY(-2px);
+      box-shadow: 0 6px 12px rgba(0, 0, 0, 0.3) !important;
     }
     #carkifelek-spin:disabled {
-      opacity: 0.7;
-      cursor: not-allowed !important;
+      background-color: #888 !important;
+      cursor: not-allowed;
       transform: none !important;
       box-shadow: none !important;
+    }
+    #carkifelek-close:hover {
+      opacity: 0.8;
+    }
+
+    #carkifelek-wheel path {
+      stroke: rgba(255,255,255,0.35);
+    }
+
+    /* Wheel shake animation - wrapper'da uygulanır, SVG'nin transform'ını etkilemez */
+    @keyframes wheel-shake {
+      0% {
+        transform: rotate(-3deg);
+      }
+      50% {
+        transform: rotate(3deg);
+      }
+      100% {
+        transform: rotate(-3deg);
+      }
+    }
+
+    /* Subtle wheel idle animation - pulse effect on container */
+    @keyframes wheelPulse {
+      0%, 100%{
+        filter: drop-shadow(0 0 15px rgba(209, 0, 0, 0.3));
+      }
+      50%{
+        filter: drop-shadow(0 0 25px rgba(209, 0, 0, 0.5));
+      }
+    }
+
+    .wheel-container {
+      animation: wheelPulse 2s ease-in-out infinite;
+    }
+
+    .wheel-container.spinning {
+      animation: none !important;
+    }
+
+    .wheel-container.spinning .wheel-shake-wrapper {
+      animation: none !important;
+    }
+
+    .wheel-container.spinning::after{
+      display: none !important;
+    }
+
+    /* Sparkle effect on idle */
+    .wheel-container::after {
+      content: '';
+      position: absolute;
+      top: 50%;
+      left: 50%;
+      width: 10px;
+      height: 10px;
+      background: radial-gradient(circle, rgba(255, 206, 1, 0.8) 0%, transparent 70%);
+      border-radius: 50%;
+      transform: translate(-50%, -50%);
+      animation: sparkle 1.5s ease-in-out infinite;
+      pointer-events: none;
+      z-index: 15;
+    }
+
+    @keyframes sparkle {
+      0%, 100%{
+        opacity: 0;
+        transform: translate(-50%, -50%) scale(0);
+      }
+      50%{
+        opacity: 1;
+        transform: translate(-50%, -50%) scale(1.5);
+      }
+    }
+
+    /* Spin button shine effect */
+    #carkifelek-spin::before {
+      content: "";
+      position: absolute;
+      top: 0;
+      left: -120%;
+      width: 50%;
+      height: 100%;
+      background: linear-gradient(120deg, transparent, rgba(255, 255, 255, 0.45), transparent);
+      opacity: 0.9;
+      transform: skewX(-20deg);
+      animation: spin-shine 3.5s ease-in-out infinite;
+      pointer-events: none;
+    }
+
+    /* Desktop Horizontal Layout */
+    @media (min-width: 768px) {
+      .carkifelek-modal-content {
+        display: flex;
+        justify-content: center;
+        align-items:center;
+        min-height: 500px !important;
+        padding: 35px !important;
+      }
+
+      .carkifelek-layout {
+        flex-direction: row !important;
+        align-items: center !important;
+        justify-content: center !important;
+        gap: 40px !important;
+        height: 100%;
+      }
+
+      .carkifelek-wheel-side {
+        width: 340px !important;
+        max-width: 45% !important;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+      }
+
+      .carkifelek-wheel-side .wheel-container {
+        width: 100% !important;
+        height: auto !important;
+        aspect-ratio: 1 !important;
+        max-width: 340px !important;
+      }
+
+      .carkifelek-form-side {
+        width: 100% !important;
+        max-width: 400px !important;
+        flex: 1 !important;
+        display: flex;
+        flex-direction: column;
+        justify-content: center;
+      }
+
+      .carkifelek-form-side > div {
+        text-align: left !important;
+      }
+
+      .carkifelek-form-side h2 {
+        text-align: center !important;
+        font-size: 24px !important;
+        margin-bottom: 0px !important;
+      }
+
+      .carkifelek-form-side p {
+        text-align: center !important;
+        font-size: 14px !important;
+      }
     }
   `;
   document.head.appendChild(style);

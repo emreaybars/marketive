@@ -1,27 +1,30 @@
 'use client'
 
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
-import { TrendingUp, Mail, Phone, Ticket, Clock, Sparkles, ArrowUp, ArrowDown } from 'lucide-react'
+import { TrendingUp, Mail, Phone, TurkishLira, Sparkles, ArrowUp, ArrowDown, Activity } from 'lucide-react'
 import { useCark } from './cark-provider'
 
 export function CarkStats() {
-  const { analytics } = useCark()
+  const { analytics, loading } = useCark()
 
-  if (!analytics) {
+  if (loading) {
     return (
-      <div className='grid gap-4 sm:grid-cols-2 lg:grid-cols-4'>
-        {[1, 2, 3, 4].map((i) => (
-          <Card key={i} className='overflow-hidden animate-pulse'>
-            <CardHeader className='flex flex-row items-center justify-between space-y-0 pb-2'>
-              <div className='h-4 w-24 bg-muted rounded' />
-              <div className='h-8 w-8 bg-muted rounded-lg' />
-            </CardHeader>
-            <CardContent>
-              <div className='h-7 w-20 bg-muted rounded mb-2' />
-              <div className='h-3 w-32 bg-muted rounded' />
-            </CardContent>
-          </Card>
+      <div className='grid gap-4 grid-cols-1 sm:grid-cols-2 lg:grid-cols-[1.5fr_1fr_1fr_1fr]'>
+        <div className="relative overflow-hidden rounded-2xl bg-gradient-to-br from-blue-500 to-blue-600 shadow-md">
+          <div className="p-6 space-y-4">
+            <div className="h-4 w-32 bg-white/20 rounded animate-pulse" />
+            <div className="h-9 w-24 bg-white/20 rounded animate-pulse" />
+            <div className="h-3 w-40 bg-white/10 rounded animate-pulse" />
+          </div>
+        </div>
+        {[2, 3, 4].map((i) => (
+          <div key={i} className="relative overflow-hidden rounded-2xl bg-white dark:bg-card border border-slate-200 dark:border-slate-800 shadow-sm">
+            <div className="p-6 space-y-4">
+              <div className="h-4 w-32 bg-slate-100 dark:bg-slate-800 rounded animate-pulse" />
+              <div className="h-8 w-20 bg-slate-50 dark:bg-slate-800/50 rounded animate-pulse" />
+              <div className="h-3 w-24 bg-slate-50 dark:bg-slate-800/30 rounded animate-pulse" />
+            </div>
+          </div>
         ))}
       </div>
     )
@@ -29,112 +32,161 @@ export function CarkStats() {
 
   const stats = [
     {
+      title: 'Ek Ciro',
+      value: '₺0,00',
+      change: 0,
+      icon: TurkishLira,
+      description: 'Çarkıfelek ile kazandığınız toplam ek gelir',
+      featured: true,
+    },
+    {
       title: 'Günlük Çevirme',
-      value: analytics.todaySpins.toLocaleString(),
-      change: analytics.changeFromLastWeek >= 0
-        ? `+${analytics.changeFromLastWeek.toFixed(1)}`
-        : analytics.changeFromLastWeek.toFixed(1),
+      value: analytics?.todaySpins?.toLocaleString() || '0',
+      change: analytics?.changeFromLastWeek || 0,
       icon: TrendingUp,
-      color: 'text-blue-600 dark:text-blue-400',
-      bgColor: 'bg-blue-500/10',
-      gradientFrom: 'from-blue-500/5',
-      gradientTo: 'to-blue-500/0',
-      description: 'Bugünkü toplam çark çevirme sayısı',
-      positive: analytics.changeFromLastWeek >= 0,
+      description: 'Toplam çark çevirme sayısı.',
     },
     {
       title: 'Toplam E-posta',
-      value: analytics.totalEmails.toLocaleString(),
-      change: '+0',
+      value: analytics?.totalEmails?.toLocaleString() || '0',
+      change: 0,
       icon: Mail,
-      color: 'text-emerald-600 dark:text-emerald-400',
-      bgColor: 'bg-emerald-500/10',
-      gradientFrom: 'from-emerald-500/5',
-      gradientTo: 'to-emerald-500/0',
-      description: 'Toplam e-posta toplama sayısı',
-      positive: true,
+      description: 'Toplam e-posta sayısı.',
     },
     {
       title: 'Toplam Telefon',
-      value: analytics.totalPhones.toLocaleString(),
-      change: '+0',
+      value: analytics?.totalPhones?.toLocaleString() || '0',
+      change: 0,
       icon: Phone,
-      color: 'text-orange-600 dark:text-orange-400',
-      bgColor: 'bg-orange-500/10',
-      gradientFrom: 'from-orange-500/5',
-      gradientTo: 'to-orange-500/0',
-      description: 'Toplam telefon numarası toplama sayısı',
-      positive: true,
-    },
-    {
-      title: 'Kullanılan Kupon',
-      value: 'Yakında',
-      change: '',
-      icon: Ticket,
-      color: 'text-purple-600 dark:text-purple-400',
-      bgColor: 'bg-purple-500/10',
-      gradientFrom: 'from-purple-500/5',
-      gradientTo: 'to-purple-500/0',
-      description: 'Kupon kullanım istatistikleri yakında burada görüntülenecek.',
-      positive: true,
-      comingSoon: true,
+      description: 'Toplam telefon sayısı.',
     },
   ]
 
   return (
-    <div className='grid gap-4 sm:grid-cols-2 lg:grid-cols-4'>
-      {stats.map((stat) => (
-        <Card
+    <div className='grid gap-4 grid-cols-1 sm:grid-cols-2 lg:grid-cols-[1.5fr_1fr_1fr_1fr]'>
+      {stats.map((stat, index) => (
+        <div
           key={stat.title}
-          className="overflow-hidden relative transition-all hover:shadow-lg border"
+          className="group relative h-full"
+          style={{ animation: `fadeInUp 0.5s ease-out ${index * 0.1}s both` }}
         >
-          {/* Inner gradient shimmer */}
-          <div className={`absolute inset-0 bg-gradient-to-br ${stat.gradientFrom} ${stat.gradientTo} opacity-60`} />
+          <div
+            className={`relative flex h-full flex-col overflow-hidden rounded-2xl ${
+              stat.featured
+                ? 'bg-gradient-to-br from-blue-500 via-blue-600 to-blue-500 dark:from-blue-600 dark:via-blue-700 dark:to-blue-600 shadow-md hover:shadow-lg'
+                : 'bg-white dark:bg-card border border-slate-200 dark:border-slate-800 shadow-sm hover:shadow-md hover:border-blue-300 dark:hover:border-blue-700'
+            } transition-all duration-300`}
+            style={
+              stat.featured
+                ? {
+                    backgroundSize: '200% 200%',
+                    animation: 'gradientShift 4s ease infinite',
+                  }
+                : undefined
+            }
+          >
+            {/* Live indicator for non-featured cards */}
+            {!stat.featured && (
+              <div className="absolute top-4 right-4 flex items-center gap-1.5">
+                <span className="relative flex h-2 w-2">
+                  <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-blue-500 opacity-75"></span>
+                  <span className="relative inline-flex rounded-full h-2 w-2 bg-blue-500"></span>
+                </span>
+              </div>
+            )}
 
-          <CardHeader className='flex flex-row items-center justify-between space-y-0 pb-3 relative'>
-            <CardTitle className='text-sm font-medium'>{stat.title}</CardTitle>
-            <div className={`rounded-xl p-2.5 ${stat.bgColor} shadow-sm`}>
-              <stat.icon className={`h-4 w-4 ${stat.color}`} />
-            </div>
-          </CardHeader>
-          <CardContent className="relative">
-            {stat.comingSoon ? (
-              <div className="space-y-3">
-                <div className="flex items-center gap-2">
-                  <div className="text-2xl font-bold text-purple-600 dark:text-purple-400">
-                    Yakında
+            {/* Featured badge */}
+            {stat.featured && (
+              <div className="absolute top-4 right-4">
+                <Badge className="gap-1 bg-white/20 text-white border-white/30 hover:bg-white/30 transition-colors backdrop-blur-sm">
+                  <Sparkles className="h-3 w-3" />
+                  <span className="text-xs">Öne Çıkan</span>
+                </Badge>
+              </div>
+            )}
+
+            <div className="flex flex-1 flex-col p-6">
+              {/* Header with icon and title */}
+              <div className="flex items-start justify-between mb-4">
+                <div className="flex items-center gap-3">
+                  <div className="relative">
+                    <div className={`absolute inset-0 ${stat.featured ? 'bg-white/20 blur-xl' : 'bg-blue-500/10 blur-xl'}`} />
+                    <div className={`relative ${stat.featured ? 'w-14 h-14' : 'w-12 h-12'} rounded-xl ${
+                      stat.featured
+                        ? 'bg-white/20 border border-white/30'
+                        : 'bg-gradient-to-br from-blue-50 to-blue-100 dark:from-blue-950/30 dark:to-blue-900/30 border border-blue-200 dark:border-blue-800'
+                    } flex items-center justify-center`}>
+                      <stat.icon className={`${stat.featured ? 'h-7 w-7' : 'h-5 w-5'} ${stat.featured ? 'text-white' : 'text-blue-600 dark:text-blue-400'}`} strokeWidth={2.5} />
+                    </div>
                   </div>
-                  <Badge className="bg-purple-500/10 text-purple-600 dark:text-purple-400 hover:bg-purple-500/20 border-purple-500/20">
-                    <Clock className="h-3 w-3 mr-1" />
-                    Çok Yakında
-                  </Badge>
-                </div>
-                <div className="flex items-start gap-2 text-xs text-muted-foreground">
-                  <Sparkles className="h-3.5 w-3.5 text-purple-500 shrink-0 mt-0.5" />
-                  <p>{stat.description}</p>
+                  <div>
+                    <h3 className={`font-semibold ${stat.featured ? 'text-white' : 'text-slate-700 dark:text-slate-200'}`}>{stat.title}</h3>
+                    <p className={`text-xs mt-0.5 ${stat.featured ? 'text-blue-100' : 'text-slate-400 dark:text-slate-500'}`}>Gerçek zamanlı veri</p>
+                  </div>
                 </div>
               </div>
-            ) : (
-              <div className="space-y-3">
-                <div className="flex items-baseline gap-2">
-                  <div className={`text-3xl font-bold ${stat.color}`}>
+
+              {/* Value section */}
+              <div className="flex flex-1 flex-col justify-between space-y-3">
+                <div className="flex items-baseline gap-3">
+                  <p className={`font-bold ${stat.featured ? 'text-4xl text-white' : 'text-3xl text-slate-900 dark:text-slate-100'}`}>
                     {stat.value}
-                  </div>
-                  {stat.change !== '+0' && (
-                    <Badge variant="outline" className={`text-xs ${stat.positive ? 'bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border-emerald-500/20' : 'bg-red-500/10 text-red-600 dark:text-red-400 border-red-500/20'}`}>
-                      {stat.positive ? <ArrowUp className="h-3 w-3 mr-1" /> : <ArrowDown className="h-3 w-3 mr-1" />}
-                      {Math.abs(parseFloat(stat.change))}%
+                  </p>
+
+                  {/* Change badge */}
+                  {stat.change !== 0 && !stat.featured && (
+                    <Badge
+                      variant="outline"
+                      className={`gap-1 ${
+                        stat.change >= 0
+                          ? 'bg-emerald-50 dark:bg-emerald-950/30 text-emerald-600 dark:text-emerald-400 border-emerald-200 dark:border-emerald-800'
+                          : 'bg-red-50 dark:bg-red-950/30 text-red-600 dark:text-red-400 border-red-200 dark:border-red-800'
+                      } transition-all duration-300`}
+                    >
+                      {stat.change >= 0 ? (
+                        <ArrowUp className="h-3 w-3" />
+                      ) : (
+                        <ArrowDown className="h-3 w-3" />
+                      )}
+                      <span className="font-semibold">{Math.abs(stat.change).toFixed(1)}%</span>
                     </Badge>
                   )}
                 </div>
-                <div className="flex items-start gap-2 text-xs text-muted-foreground">
-                  <Sparkles className={`h-3.5 w-3.5 ${stat.color} shrink-0 mt-0.5 opacity-70`} />
+
+                {/* Description */}
+                <div className={`flex items-center gap-2 ${stat.featured ? 'text-sm text-blue-50' : 'text-sm text-slate-500 dark:text-slate-400'}`}>
+                  {stat.featured ? (
+                    <Sparkles className="h-4 w-4 text-white/80" />
+                  ) : (
+                    <Activity className="h-4 w-4 text-blue-500 animate-pulse" />
+                  )}
                   <p>{stat.description}</p>
                 </div>
               </div>
-            )}
-          </CardContent>
-        </Card>
+
+              {/* Bottom accent line with animation */}
+              {!stat.featured && (
+                <div className="absolute bottom-0 left-0 right-0 h-0.5 bg-gradient-to-r from-blue-500 via-blue-400 to-blue-500 transform scale-x-0 group-hover:scale-x-100 transition-transform duration-500" />
+              )}
+
+              {/* Featured card gradient overlay */}
+              {stat.featured && (
+                <>
+                  {/* Pattern overlay */}
+                  <div
+                    className="absolute inset-0 opacity-[0.09]"
+                    style={{
+                      backgroundImage: `radial-gradient(circle, white 1px, transparent 1px)`,
+                      backgroundSize: '20px 20px',
+                    }}
+                  />
+                  <div className="absolute top-0 right-0 w-40 h-40 bg-white/5 rounded-full blur-3xl -translate-y-1/2 translate-x-1/2" />
+                  <div className="absolute bottom-0 left-0 w-32 h-32 bg-white/5 rounded-full blur-3xl translate-y-1/2 -translate-x-1/2" />
+                </>
+              )}
+            </div>
+          </div>
+        </div>
       ))}
     </div>
   )

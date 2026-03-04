@@ -1,110 +1,51 @@
 import { type SVGProps } from 'react'
-import { cn } from '@/lib/utils'
-import { type Direction } from '@/context/direction-provider'
 
-type IconDirProps = SVGProps<SVGSVGElement> & {
-  dir: Direction
+interface IconDirProps extends SVGProps<SVGSVGElement> {
+  dir: 'ltr' | 'rtl'
 }
 
-export function IconDir({ dir, className, ...props }: IconDirProps) {
+export function IconDir({ dir, ...props }: IconDirProps) {
+  const isLtr = dir === 'ltr'
+
   return (
     <svg
       data-name={`icon-dir-${dir}`}
       xmlns='http://www.w3.org/2000/svg'
       viewBox='0 0 79.86 51.14'
-      className={cn(dir === 'rtl' && 'rotate-y-180', className)}
       {...props}
     >
-      <path
-        d='M23.42.51h51.92c2.21 0 4 1.79 4 4v42.18c0 2.21-1.79 4-4 4H23.42s-.04-.02-.04-.04V.55s.02-.04.04-.04z'
-        opacity={0.15}
-      />
-      <path
-        fill='none'
-        opacity={0.72}
-        strokeLinecap='round'
-        strokeMiterlimit={10}
-        strokeWidth='2px'
-        d='M5.56 14.88L17.78 14.88'
-      />
-      <path
-        fill='none'
-        opacity={0.48}
-        strokeLinecap='round'
-        strokeMiterlimit={10}
-        strokeWidth='2px'
-        d='M5.56 22.09L16.08 22.09'
-      />
-      <path
-        fill='none'
-        opacity={0.55}
-        strokeLinecap='round'
-        strokeMiterlimit={10}
-        strokeWidth='2px'
-        d='M5.56 18.38L14.93 18.38'
-      />
-      <g strokeLinecap='round' strokeMiterlimit={10}>
-        <circle cx={7.51} cy={7.4} r={2.54} opacity={0.8} />
-        <path
-          fill='none'
-          opacity={0.8}
-          strokeWidth='2px'
-          d='M12.06 6.14L17.78 6.14'
-        />
-        <path fill='none' opacity={0.6} d='M11.85 8.79L16.91 8.79' />
+      <g fill='#d9d9d9'>
+        <rect x={0.53} y={0.5} width={78.83} height={50.14} rx={3.5} ry={3.5} />
+        <path d='M75.86 1c1.65 0 3 1.35 3 3v43.14c0 1.65-1.35 3-3 3H4.03c-1.65 0-3-1.35-3-3V4c0-1.65 1.35-3 3-3h71.83m0-1H4.03c-2.21 0-4 1.79-4 4v43.14c0 2.21 1.79 4 4 4h71.83c2.21 0 4-1.79 4-4V4c0-2.21-1.79-4-4-4z' />
       </g>
-      <path
-        fill='none'
-        opacity={0.62}
-        strokeLinecap='round'
-        strokeMiterlimit={10}
-        strokeWidth='3px'
-        d='M29.41 7.4L34.67 7.4'
-      />
       <rect
-        x={28.76}
-        y={11.21}
-        width={26.03}
-        height={2.73}
-        rx={0.64}
-        ry={0.64}
-        opacity={0.44}
-        strokeLinecap='round'
-        strokeMiterlimit={10}
+        x={4.5}
+        y={4.5}
+        width={70.86}
+        height={42.14}
+        rx={1.5}
+        ry={1.5}
+        fill='#fff'
       />
-      <rect
-        x={28.76}
-        y={17.01}
-        width={44.25}
-        height={13.48}
-        rx={0.64}
-        ry={0.64}
-        opacity={0.3}
-        strokeLinecap='round'
-        strokeMiterlimit={10}
-      />
-      <rect
-        x={28.76}
-        y={33.57}
-        width={44.25}
-        height={4.67}
-        rx={0.64}
-        ry={0.64}
-        opacity={0.21}
-        strokeLinecap='round'
-        strokeMiterlimit={10}
-      />
-      <rect
-        x={28.76}
-        y={41.32}
-        width={36.21}
-        height={4.67}
-        rx={0.64}
-        ry={0.64}
-        opacity={0.3}
-        strokeLinecap='round'
-        strokeMiterlimit={10}
-      />
+      {isLtr ? (
+        <>
+          <rect x={8} y={10} width={24} height={3} rx={1.5} fill='#d9d9d9' />
+          <rect x={8} y={17} width={32} height={3} rx={1.5} fill='#d9d9d9' />
+          <rect x={8} y={24} width={20} height={3} rx={1.5} fill='#d9d9d9' />
+          <rect x={8} y={31} width={28} height={3} rx={1.5} fill='#d9d9d9' />
+          <rect x={8} y={38} width={16} height={3} rx={1.5} fill='#d9d9d9' />
+          <path d='M60 15l-8 8 8 8' stroke='#d9d9d9' strokeWidth={3} fill='none' strokeLinecap='round' strokeLinejoin='round' />
+        </>
+      ) : (
+        <>
+          <rect x={47.86} y={10} width={24} height={3} rx={1.5} fill='#d9d9d9' />
+          <rect x={39.86} y={17} width={32} height={3} rx={1.5} fill='#d9d9d9' />
+          <rect x={51.86} y={24} width={20} height={3} rx={1.5} fill='#d9d9d9' />
+          <rect x={43.86} y={31} width={28} height={3} rx={1.5} fill='#d9d9d9' />
+          <rect x={55.86} y={38} width={16} height={3} rx={1.5} fill='#d9d9d9' />
+          <path d='M19.86 15l8 8-8 8' stroke='#d9d9d9' strokeWidth={3} fill='none' strokeLinecap='round' strokeLinejoin='round' />
+        </>
+      )}
     </svg>
   )
 }

@@ -1,5 +1,5 @@
 import { useNavigate } from '@tanstack/react-router'
-import { useClerk } from '@clerk/clerk-react'
+import { useAuth } from '@/context/auth-provider'
 import { ConfirmDialog } from '@/components/confirm-dialog'
 
 interface SignOutDialogProps {
@@ -9,7 +9,7 @@ interface SignOutDialogProps {
 
 export function SignOutDialog({ open, onOpenChange }: SignOutDialogProps) {
   const navigate = useNavigate()
-  const { signOut } = useClerk()
+  const { signOut } = useAuth()
 
   const handleSignOut = async () => {
     await signOut()

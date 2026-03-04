@@ -12,19 +12,11 @@ import { handleServerError } from '@/lib/handle-server-error'
 import { DirectionProvider } from './context/direction-provider'
 import { FontProvider } from './context/font-provider'
 import { ThemeProvider } from './context/theme-provider'
-import { ClerkProvider } from '@clerk/clerk-react'
-import { trTR } from '@clerk/localizations/tr-TR'
+import { AuthProvider } from './context/auth-provider'
 // Generated Routes
 import { routeTree } from './routeTree.gen'
 // Styles
 import './styles/index.css'
-
-// Import your Publishable Key
-const PUBLISHABLE_KEY = import.meta.env.VITE_CLERK_PUBLISHABLE_KEY
-
-if (!PUBLISHABLE_KEY) {
-  throw new Error('Missing VITE_CLERK_PUBLISHABLE_KEY environment variable')
-}
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -107,15 +99,7 @@ if (!rootElement.innerHTML) {
   const root = ReactDOM.createRoot(rootElement)
   root.render(
     <StrictMode>
-      <ClerkProvider
-        publishableKey={PUBLISHABLE_KEY}
-        afterSignOutUrl='/sign-in'
-        signInUrl='/sign-in'
-        signUpUrl='/sign-up'
-        signInFallbackRedirectUrl='/'
-        signUpFallbackRedirectUrl='/'
-        localization={trTR}
-      >
+      <AuthProvider>
         <QueryClientProvider client={queryClient}>
           <ThemeProvider>
             <FontProvider>
@@ -125,7 +109,7 @@ if (!rootElement.innerHTML) {
             </FontProvider>
           </ThemeProvider>
         </QueryClientProvider>
-      </ClerkProvider>
+      </AuthProvider>
     </StrictMode>
   )
 }

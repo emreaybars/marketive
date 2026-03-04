@@ -2,10 +2,10 @@ import { useState } from 'react'
 import { z } from 'zod'
 import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
-import { useNavigate } from '@tanstack/react-router'
 import { ArrowRight, Loader2 } from 'lucide-react'
 import { toast } from 'sonner'
-import { sleep, cn } from '@/lib/utils'
+import { cn } from '@/lib/utils'
+import { useAuth } from '@/context/auth-provider'
 import { Button } from '@/components/ui/button'
 import {
   Form,
@@ -18,38 +18,58 @@ import {
 import { Input } from '@/components/ui/input'
 
 const formSchema = z.object({
-  email: z.email({
-    error: (iss) => (iss.input === '' ? 'Please enter your email' : undefined),
-  }),
+  email: z.string().email('Geçerli bir e-posta adresi girin'),
 })
 
 export function ForgotPasswordForm({
   className,
   ...props
 }: React.HTMLAttributes<HTMLFormElement>) {
-  const navigate = useNavigate()
   const [isLoading, setIsLoading] = useState(false)
+  const [emailSent, setEmailSent] = useState(false)
+  const { resetPassword } = useAuth()
 
   const form = useForm<z.infer<typeof formSchema>>({
     resolver: zodResolver(formSchema),
     defaultValues: { email: '' },
   })
 
-  function onSubmit(data: z.infer<typeof formSchema>) {
+  async function onSubmit(data: z.infer<typeof formSchema>) {
     setIsLoading(true)
-    // eslint-disable-next-line no-console
-    console.log(data)
 
-    toast.promise(sleep(2000), {
-      loading: 'Sending email...',
-      success: () => {
-        setIsLoading(false)
+    try {
+      const { error } = await resetPassword(data.email)
+
+      if (error) {
+        toast.error(error.message || 'E-posta gönderilemedi')
+      } else {
+        setEmailSent(true)
+        toast.success(`Şifre sıfırlama e-postası ${data.email} adresine gönderildi`)
         form.reset()
-        navigate({ to: '/otp' })
-        return `Email sent to ${data.email}`
-      },
-      error: 'Error',
-    })
+      }
+    } catch (error: any) {
+      toast.error(error?.message || 'E-posta gönderilemedi')
+    } finally {
+      setIsLoading(false)
+    }
+  }
+
+  if (emailSent) {
+    return (
+      <div className={cn('grid gap-2', className)}>
+        <p className='text-sm text-muted-foreground text-center'>
+          Şifre sıfırlama bağlantısı e-posta adresinize gönderildi.
+          Lütfen gelen kutunuzu kontrol edin.
+        </p>
+        <Button
+          variant='outline'
+          onClick={() => setEmailSent(false)}
+          className='mt-2'
+        >
+          Tekrar Gönder
+        </Button>
+      </div>
+    )
   }
 
   return (
@@ -64,17 +84,17 @@ export function ForgotPasswordForm({
           name='email'
           render={({ field }) => (
             <FormItem>
-              <FormLabel>Email</FormLabel>
+              <FormLabel>E-posta</FormLabel>
               <FormControl>
-                <Input placeholder='name@example.com' {...field} />
+                <Input placeholder='ornek@email.com' {...field} />
               </FormControl>
               <FormMessage />
             </FormItem>
           )}
         />
         <Button className='mt-2' disabled={isLoading}>
-          Continue
           {isLoading ? <Loader2 className='animate-spin' /> : <ArrowRight />}
+          Devam Et
         </Button>
       </form>
     </Form>

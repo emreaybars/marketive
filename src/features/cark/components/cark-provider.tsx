@@ -1,14 +1,9 @@
 'use client'
 
 import { createContext, useContext, useState, useEffect, useCallback, ReactNode } from 'react'
-import { createClient } from '@supabase/supabase-js'
+import { supabase } from '@/lib/supabase-client'
 import { generateWidgetToken } from '@/lib/widget-token'
-import { useUser } from '@clerk/clerk-react'
-
-// Supabase client
-const supabaseUrl = import.meta.env.VITE_SUPABASE_URL || 'https://qiiygcclanmgzlrcpmle.supabase.co'
-const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY || ''
-const supabase = createClient(supabaseUrl, supabaseAnonKey)
+import { useUser } from '@/context/auth-provider'
 
 interface Wheel {
   id: string
@@ -83,6 +78,57 @@ interface CreateWheelData {
   }>
 }
 
+interface UpdateWheelData {
+  wheelId: string
+  storeName?: string
+  logoUrl?: string
+  websiteUrl?: string
+  brandName?: string
+  contactInfoType?: 'email' | 'phone'
+  widgetTitle?: string
+  widgetDescription?: string
+  buttonText?: string
+  backgroundColor?: string
+  buttonColor?: string
+  autoShow?: boolean
+  showDelay?: number
+  active?: boolean
+  prizes?: Array<{
+    id?: string
+    name: string
+    description: string
+    redirectUrl: string
+    color: string
+    chance: number
+    couponCodes: string
+  }>
+}
+
+interface UpdateWheelData {
+  storeName?: string
+  logoUrl?: string
+  websiteUrl?: string
+  brandName?: string
+  contactInfoType?: 'email' | 'phone'
+  widgetTitle?: string
+  widgetDescription?: string
+  buttonText?: string
+  backgroundColor?: string
+  buttonColor?: string
+  autoShow?: boolean
+  showDelay?: number
+  active?: boolean
+  prizes?: Array<{
+    id?: string
+    name: string
+    description: string
+    redirectUrl: string
+    color: string
+    chance: number
+    couponCodes: string
+  }>
+}
+
 // Analytics statistics
 interface DailyStats {
   date: string
@@ -108,10 +154,12 @@ interface CarkContextType {
   analytics: AnalyticsStats | null
   createWheel: (data: CreateWheelData) => Promise<{ success: boolean; error?: string; wheel?: Wheel }>
   updateWheel: (id: string, data: Partial<Wheel>) => Promise<void>
+  fullUpdateWheel: (data: UpdateWheelData) => Promise<{ success: boolean; error?: string }>
   deleteWheel: (id: string) => Promise<void>
   refreshWheels: () => Promise<void>
   refreshWheelSpins: () => Promise<void>
   calculateAnalytics: () => void
+  getWheelById: (id: string) => Wheel | undefined
 }
 
 const CarkContext = createContext<CarkContextType | undefined>(undefined)
@@ -120,23 +168,23 @@ export function CarkProvider({ children }: { children: ReactNode }) {
   const { user, isLoaded: isUserLoaded } = useUser()
   const [wheels, setWheels] = useState<Wheel[]>([])
   const [wheelSpins, setWheelSpins] = useState<WheelSpinResult[]>([])
-  const [loading, setLoading] = useState(false)
+  const [loading, setLoading] = useState(true)
   const [analytics, setAnalytics] = useState<AnalyticsStats | null>(null)
 
-  // Get Clerk user ID for Supabase queries
-  const clerkUserId = user?.id
+  // Get user ID for Supabase queries
+  const userId = user?.id
 
   // Fetch all wheels (shops) - SECURITY: Only user's own shops
   const refreshWheels = async () => {
     setLoading(true)
     try {
-      // Wait for Clerk auth to load
+      // Wait for auth to load
       if (!isUserLoaded) {
         setLoading(false)
         return
       }
 
-      if (!clerkUserId) {
+      if (!userId) {
         console.warn('Kullanıcı giriş yapmamış, çarklar yüklenemiyor')
         setWheels([])
         return
@@ -144,7 +192,7 @@ export function CarkProvider({ children }: { children: ReactNode }) {
 
       // Use RPC function to get user's shops (works with TEXT type)
       const { data, error } = await supabase
-        .rpc('get_user_shops', { p_customer_id: clerkUserId })
+        .rpc('get_user_shops', { p_customer_id: userId })
 
       if (error) throw error
 
@@ -154,7 +202,7 @@ export function CarkProvider({ children }: { children: ReactNode }) {
         return wheel
       })
 
-      // Generate embed codes for each wheel
+      // Generate embed codes and fetch prizes for each wheel
       const wheelsWithEmbed = await Promise.all(
         wheels.map(async (wheel: any) => {
           const token = await generateWidgetToken(wheel.shop_id, wheel.id)
@@ -164,10 +212,19 @@ export function CarkProvider({ children }: { children: ReactNode }) {
   data-shop-token="${token}"
   src="${domain}/widget.js">
 </script>`
+
+          // Fetch prizes for this wheel
+          const { data: prizesData } = await supabase
+            .from('prizes')
+            .select('*')
+            .eq('shop_id', wheel.id)
+            .order('display_order', { ascending: true })
+
           return {
             ...wheel,
             embed_code: embedCode,
-            widget_settings: wheel.widget_settings
+            widget_settings: wheel.widget_settings,
+            prizes: prizesData || []
           }
         })
       )
@@ -184,17 +241,17 @@ export function CarkProvider({ children }: { children: ReactNode }) {
   const createWheel = async (data: CreateWheelData) => {
     setLoading(true)
     try {
-      // SECURITY: Check if user is authenticated via Clerk
-      if (!clerkUserId) {
+      // SECURITY: Check if user is authenticated
+      if (!userId) {
         return { success: false, error: 'Oturum açmanız gerekiyor' }
       }
 
-      // 1. Create shop with customer_id (Clerk user ID)
+      // 1. Create shop with customer_id (user ID)
       const { data: shop, error: shopError } = await supabase
         .from('shops')
         .insert({
           shop_id: data.storeId,
-          customer_id: clerkUserId, // SECURITY: Link to Clerk user
+          customer_id: userId, // SECURITY: Link to user
           name: data.storeName,
           logo_url: data.logoUrl,
           website_url: data.websiteUrl,
@@ -281,7 +338,7 @@ export function CarkProvider({ children }: { children: ReactNode }) {
   const updateWheel = async (id: string, data: Partial<Wheel>) => {
     setLoading(true)
     try {
-      if (!clerkUserId) {
+      if (!userId) {
         throw new Error('Oturum açmanız gerekiyor')
       }
 
@@ -292,7 +349,7 @@ export function CarkProvider({ children }: { children: ReactNode }) {
         .eq('id', id)
         .single()
 
-      if (!shop || shop.customer_id !== clerkUserId) {
+      if (!shop || shop.customer_id !== userId) {
         throw new Error('Bu çarkı güncelleme yetkiniz yok')
       }
 
@@ -317,11 +374,121 @@ export function CarkProvider({ children }: { children: ReactNode }) {
     }
   }
 
+  // Get wheel by ID - SECURITY: Only user's own shops
+  const getWheelById = (id: string): Wheel | undefined => {
+    return wheels.find(w => w.id === id)
+  }
+
+  // Full update wheel with all data (shop, widget settings, prizes)
+  const fullUpdateWheel = async (data: UpdateWheelData): Promise<{ success: boolean; error?: string }> => {
+    setLoading(true)
+    try {
+      if (!userId) {
+        return { success: false, error: 'Oturum açmanız gerekiyor' }
+      }
+
+      const { wheelId, ...updateData } = data
+
+      // First, fetch the shop to check ownership
+      const { data: shop } = await supabase
+        .from('shops')
+        .select('id, customer_id')
+        .eq('id', wheelId)
+        .single()
+
+      if (!shop || shop.customer_id !== userId) {
+        return { success: false, error: 'Bu çarkı güncelleme yetkiniz yok' }
+      }
+
+      // 1. Update shop data
+      if (updateData.storeName !== undefined || updateData.logoUrl !== undefined ||
+          updateData.websiteUrl !== undefined || updateData.brandName !== undefined ||
+          updateData.contactInfoType !== undefined || updateData.active !== undefined) {
+        const { error: shopError } = await supabase
+          .from('shops')
+          .update({
+            name: updateData.storeName,
+            logo_url: updateData.logoUrl,
+            website_url: updateData.websiteUrl,
+            brand_name: updateData.brandName,
+            contact_info_type: updateData.contactInfoType,
+            active: updateData.active
+          })
+          .eq('id', wheelId)
+
+        if (shopError) throw shopError
+      }
+
+      // 2. Update widget settings
+      if (updateData.widgetTitle !== undefined || updateData.widgetDescription !== undefined ||
+          updateData.buttonText !== undefined || updateData.backgroundColor !== undefined ||
+          updateData.buttonColor !== undefined || updateData.autoShow !== undefined ||
+          updateData.showDelay !== undefined) {
+        const { error: widgetError } = await supabase
+          .from('widget_settings')
+          .update({
+            title: updateData.widgetTitle,
+            description: updateData.widgetDescription,
+            button_text: updateData.buttonText,
+            background_color: updateData.backgroundColor,
+            button_color: updateData.buttonColor,
+            show_on_load: updateData.autoShow,
+            popup_delay: updateData.showDelay
+          })
+          .eq('shop_id', wheelId)
+
+        if (widgetError) throw widgetError
+      }
+
+      // 3. Update prizes (delete old, insert new)
+      if (updateData.prizes !== undefined) {
+        // Delete existing prizes
+        const { error: deletePrizesError } = await supabase
+          .from('prizes')
+          .delete()
+          .eq('shop_id', wheelId)
+
+        if (deletePrizesError) throw deletePrizesError
+
+        // Insert new prizes
+        if (updateData.prizes.length > 0) {
+          const prizes = updateData.prizes.map((prize, index) => ({
+            shop_id: wheelId,
+            name: prize.name,
+            description: prize.description,
+            redirect_url: prize.redirectUrl,
+            color: prize.color,
+            chance: prize.chance,
+            coupon_codes: prize.couponCodes,
+            display_order: index,
+            active: true
+          }))
+
+          const { error: prizesError } = await supabase
+            .from('prizes')
+            .insert(prizes)
+
+          if (prizesError) throw prizesError
+        }
+      }
+
+      // 4. Refresh list
+      await refreshWheels()
+
+      return { success: true }
+    } catch (err: any) {
+      console.error('Error updating wheel:', err)
+      return { success: false, error: err.message || 'Failed to update wheel' }
+    } finally {
+      setLoading(false)
+    }
+  }
+
   // Delete wheel - SECURITY: Only user's own shops
   const deleteWheel = async (id: string) => {
     setLoading(true)
     try {
-      if (!clerkUserId) {
+      if (!userId) {
         throw new Error('Oturum açmanız gerekiyor')
       }
 
@@ -332,7 +499,7 @@ export function CarkProvider({ children }: { children: ReactNode }) {
         .eq('id', id)
         .single()
 
-      if (!shop || shop.customer_id !== clerkUserId) {
+      if (!shop || shop.customer_id !== userId) {
         throw new Error('Bu çarkı silme yetkiniz yok')
       }
 
@@ -355,8 +522,8 @@ export function CarkProvider({ children }: { children: ReactNode }) {
   const refreshWheelSpins = async () => {
     setLoading(true)
     try {
-      // Wait for Clerk auth to load
-      if (!isUserLoaded || !clerkUserId) {
+      // Wait for auth to load
+      if (!isUserLoaded || !userId) {
         console.warn('Kullanıcı giriş yapmamış')
         setWheelSpins([])
         return
@@ -364,7 +531,7 @@ export function CarkProvider({ children }: { children: ReactNode }) {
 
       // Use RPC function to get user's wheel spins
       const { data, error } = await supabase
-        .rpc('get_user_wheel_spins', { p_customer_id: clerkUserId })
+        .rpc('get_user_wheel_spins', { p_customer_id: userId })
 
       if (error) throw error
 
@@ -473,12 +640,12 @@ export function CarkProvider({ children }: { children: ReactNode }) {
 
   // Fetch on mount and when user auth state changes
   useEffect(() => {
-    // Only fetch if Clerk auth is loaded and user is logged in
-    if (isUserLoaded && clerkUserId) {
+    // Only fetch if auth is loaded and user is logged in
+    if (isUserLoaded && userId) {
       refreshWheels()
       refreshWheelSpins()
     }
-  }, [isUserLoaded, clerkUserId])
+  }, [isUserLoaded, userId])
 
   // Calculate analytics when wheelSpins changes
   useEffect(() => {
@@ -486,7 +653,7 @@ export function CarkProvider({ children }: { children: ReactNode }) {
   }, [wheelSpins, calculateAnalytics])
 
   return (
-    <CarkContext.Provider value={{ wheels, wheelSpins, loading, analytics, createWheel, updateWheel, deleteWheel, refreshWheels, refreshWheelSpins, calculateAnalytics }}>
+    <CarkContext.Provider value={{ wheels, wheelSpins, loading, analytics, createWheel, updateWheel, fullUpdateWheel, deleteWheel, refreshWheels, refreshWheelSpins, calculateAnalytics, getWheelById }}>
       {children}
     </CarkContext.Provider>
   )
@@ -501,4 +668,4 @@ export function useCark() {
 }
 
 // Export types for use in other components
-export type { Wheel, Prize, CreateWheelData, WheelSpinResult, DailyStats, AnalyticsStats }
+export type { Wheel, Prize, CreateWheelData, UpdateWheelData, WheelSpinResult, DailyStats, AnalyticsStats }
