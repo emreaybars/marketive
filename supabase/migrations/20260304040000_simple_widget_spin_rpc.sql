@@ -1,6 +1,5 @@
 -- ============================================
--- BASITLEŞTIRILMIŞ WIDGET SPIN RPC (Geçici)
--- Token doğrulamasız, doğrudan shop_uuid ile
+-- BASITLEŞTIRILMIŞ WIDGET SPIN RPC (wheel_wins olmadan)
 -- ============================================
 
 DROP FUNCTION IF EXISTS widget_log_spin_simple(UUID, TEXT, UUID, TEXT);
@@ -52,14 +51,14 @@ BEGIN
     RAISE EXCEPTION 'Bu iletişim bilgisi ile zaten çark çevirdiniz';
   END IF;
 
-  -- 5. SPIN KAYDI (result kolonu dahil)
+  -- 5. SPIN KAYDI
   INSERT INTO wheel_spins (shop_id, full_name, email, phone, result, created_at)
   VALUES (
     p_shop_uuid,
     p_full_name,
     CASE WHEN v_contact_type = 'email' THEN p_contact ELSE NULL END,
     CASE WHEN v_contact_type = 'phone' THEN p_contact ELSE NULL END,
-    'win',  -- result kolonu: win/lose/etc
+    'win',
     NOW()
   ) RETURNING id INTO v_spin_id;
 
@@ -70,9 +69,7 @@ BEGIN
     v_coupon_code := UPPER(SUBSTR(MD5(v_spin_id::TEXT), 1, 8));
   END IF;
 
-  -- 7. WHEEL WINS KAYDI
-  INSERT INTO wheel_wins (spin_id, prize_id, shop_id, coupon_code, created_at)
-  VALUES (v_spin_id, p_prize_id, p_shop_uuid, v_coupon_code, NOW());
+  -- wheel_wins tablosu yok, sadece wheel_spins kullanıyoruz
 
   RETURN json_build_object('success', true, 'spin_id', v_spin_id, 'coupon_code', v_coupon_code);
 END;
