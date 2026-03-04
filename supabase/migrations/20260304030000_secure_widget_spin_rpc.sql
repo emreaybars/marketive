@@ -3,7 +3,7 @@
 -- Token doğrulaması ve validation ile güvenli spin kaydı
 -- ============================================
 
-DROP FUNCTION IF EXISTS widget_log_spin(TEXT, TEXT, UUID, TEXT, TEXT);
+DROP FUNCTION IF EXISTS widget_log_spin(TEXT, TEXT, UUID, TEXT, TEXT, TEXT);
 
 CREATE OR REPLACE FUNCTION widget_log_spin(
   p_token TEXT,
@@ -112,8 +112,8 @@ END;
 $$ LANGUAGE plpgsql SECURITY DEFINER;
 
 -- Anonim erişime izin ver
-GRANT EXECUTE ON FUNCTION widget_log_spin(TEXT, TEXT, UUID, TEXT, TEXT) TO anon;
-GRANT EXECUTE ON FUNCTION widget_log_spin(TEXT, TEXT, UUID, TEXT, TEXT) TO authenticated;
+GRANT EXECUTE ON FUNCTION widget_log_spin(TEXT, TEXT, UUID, TEXT, TEXT, TEXT) TO anon;
+GRANT EXECUTE ON FUNCTION widget_log_spin(TEXT, TEXT, UUID, TEXT, TEXT, TEXT) TO authenticated;
 
 -- GÜVENLİK ÖZELLİKLERİ:
 -- 1. Token doğrulaması (base64url decode + json parse)
