@@ -1,23 +1,32 @@
 /**
  * Shop Token Generator for Widget Embed Security
  * Each shop gets a unique token that is used instead of exposing Supabase keys
+ * GÜVENLİK: HMAC-SHA256 signed tokens for production use
  */
 
 import { createClient } from '@supabase/supabase-js';
+import { createHmac, timingSafeEqual } from 'crypto';
 
 const supabase = createClient(
   import.meta.env.VITE_SUPABASE_URL || '',
   import.meta.env.SUPABASE_SERVICE_ROLE_KEY || ''
 );
 
+// GÜVENLİK: WIDGET_SECRET must be set
+const WIDGET_SECRET = import.meta.env.WIDGET_SECRET;
+if (!WIDGET_SECRET) {
+  throw new Error('WIDGET_SECRET environment variable is required');
+}
+
 export interface ShopTokenPayload {
   shop_id: string;  // The public shop_id (VARCHAR)
   shop_uuid: string; // The internal UUID
-  iat: number;
+  ts: number;
+  sig: string;      // HMAC signature
 }
 
 /**
- * Generate a secure token for a shop
+ * Generate a secure token for a shop with HMAC signature
  * This token is embedded in the widget code and used to authenticate requests
  */
 export async function generateShopToken(shopId: string): Promise<string> {
@@ -32,30 +41,43 @@ export async function generateShopToken(shopId: string): Promise<string> {
   }
 
   const payload = {
-    shop_id: shop.shop_id,
-    shop_uuid: shop.id,
-    iat: Date.now(),
+    sid: shop.shop_id,
+    uid: shop.id,
+    ts: Date.now(),
   };
 
-  // Simple base64 encoding (for production, use proper JWT signing)
-  const token = Buffer.from(JSON.stringify(payload)).toString('base64url');
+  const payloadStr = JSON.stringify(payload);
+  const signature = createHmac('sha256', WIDGET_SECRET)
+    .update(payloadStr)
+    .digest('hex');
 
-  return token;
+  const tokenPayload = { ...payload, sig: signature };
+  return Buffer.from(JSON.stringify(tokenPayload)).toString('base64url');
 }
 
 /**
  * Verify a shop token and return the shop UUID
+ * GÜVENLİK: Validates HMAC signature to prevent token forgery
  */
-export function verifyShopToken(token: string): ShopTokenPayload | null {
+export function verifyShopToken(token: string): { shopId: string; shopUuid: string } | null {
   try {
-    const payload = JSON.parse(Buffer.from(token, 'base64url').toString());
+    const payload = JSON.parse(Buffer.from(token, 'base64url').toString()) as ShopTokenPayload;
 
-    // Validate structure
-    if (!payload.shop_id || !payload.shop_uuid) {
+    // Verify signature
+    const { sig, ...data } = payload;
+    const payloadStr = JSON.stringify(data);
+    const expectedSig = createHmac('sha256', WIDGET_SECRET)
+      .update(payloadStr)
+      .digest('hex');
+
+    if (sig !== expectedSig) {
       return null;
     }
 
-    return payload;
+    return {
+      shopId: data.sid,
+      shopUuid: data.uid,
+    };
   } catch {
     return null;
   }

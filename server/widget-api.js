@@ -13,11 +13,15 @@ const path = require('path');
 const app = express();
 const PORT = process.env.PORT || 3001;
 
-// Initialize Supabase with service role key (server-side only)
-const supabase = createClient(
-  process.env.SUPABASE_URL || 'https://qiiygcclanmgzlrcpmle.supabase.co',
-  process.env.SUPABASE_SERVICE_ROLE_KEY || 'your-service-role-key-here'
-);
+// GÜVENLİK: Hardcoded credentials kaldırıldı - Environment variables zorunlu
+const supabaseUrl = process.env.SUPABASE_URL;
+const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
+
+if (!supabaseUrl || !supabaseServiceKey) {
+  throw new Error('SUPABASE_URL and SUPABASE_SERVICE_ROLE_KEY environment variables are required');
+}
+
+const supabase = createClient(supabaseUrl, supabaseServiceKey);
 
 // Middleware
 app.use(cors());
@@ -34,6 +38,12 @@ const tokenCache = new Map();
  * Called when creating/editing a shop in the admin panel
  */
 function generateShopToken(shopId, shopUuid) {
+  // GÜVENLİK: WIDGET_SECRET environment variable zorunlu
+  const widgetSecret = process.env.WIDGET_SECRET;
+  if (!widgetSecret) {
+    throw new Error('WIDGET_SECRET environment variable is required');
+  }
+
   const payload = {
     sid: shopId,      // Public shop_id
     uid: shopUuid,    // Internal UUID
@@ -42,7 +52,7 @@ function generateShopToken(shopId, shopUuid) {
 
   const payloadStr = JSON.stringify(payload);
   const signature = crypto
-    .createHmac('sha256', process.env.WIDGET_SECRET || 'default-secret-change-me')
+    .createHmac('sha256', widgetSecret)
     .update(payloadStr)
     .digest('hex');
 
@@ -65,8 +75,15 @@ function verifyShopToken(token) {
     // Verify signature
     const { sig, ...data } = payload;
     const payloadStr = JSON.stringify(data);
+
+    // GÜVENLİK: WIDGET_SECRET environment variable zorunlu
+    const widgetSecret = process.env.WIDGET_SECRET;
+    if (!widgetSecret) {
+      throw new Error('WIDGET_SECRET environment variable is required');
+    }
+
     const expectedSig = crypto
-      .createHmac('sha256', process.env.WIDGET_SECRET || 'default-secret-change-me')
+      .createHmac('sha256', widgetSecret)
       .update(payloadStr)
       .digest('hex');
 

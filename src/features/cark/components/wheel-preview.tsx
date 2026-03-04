@@ -20,6 +20,16 @@ interface WheelPreviewProps {
   spinning?: boolean
 }
 
+// GÜVENLİK: HTML entity encoding - XSS önleme
+function escapeHtml(unsafe: string): string {
+  return unsafe
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;")
+    .replace(/'/g, "&#039;")
+}
+
 export function WheelPreview({
   prizes,
   size = 200,
@@ -32,15 +42,15 @@ export function WheelPreview({
   const centerY = 50
   const radius = 45
 
-  const { svgContent, totalRotation } = useMemo(() => {
+  // GÜVENLİK: React elementleri ile güvenli SVG oluşturma
+  const { wheelSegments, totalRotation } = useMemo(() => {
     if (!prizes || prizes.length === 0) {
-      return { svgContent: '', totalRotation: 0 }
+      return { wheelSegments: [], totalRotation: 0 }
     }
 
     const anglePerPrize = 360 / prizes.length
-    let content = ''
 
-    prizes.forEach((prize, index) => {
+    const segments = prizes.map((prize, index) => {
       const startAngle = index * anglePerPrize
       const endAngle = (index + 1) * anglePerPrize
       const startRad = (startAngle - 90) * Math.PI / 180
@@ -52,12 +62,7 @@ export function WheelPreview({
       const y2 = centerY + radius * Math.sin(endRad)
 
       // Dilim yolu
-      const pathData = `
-        M ${centerX},${centerY}
-        L ${x1},${y1}
-        A ${radius},${radius} 0 0,1 ${x2},${y2}
-        Z
-      `
+      const pathData = `M ${centerX},${centerY} L ${x1},${y1} A ${radius},${radius} 0 0,1 ${x2},${y2} Z`
 
       // Metin pozisyonu
       const textRadius = radius * 0.65
@@ -66,29 +71,36 @@ export function WheelPreview({
       const textX = centerX + textRadius * Math.cos(textRad)
       const textY = centerY + textRadius * Math.sin(textRad)
 
-      content += `
-        <path
-          d="${pathData}"
-          fill="${prize.color || '#ff0000'}"
-          stroke="white"
-          stroke-width="0.3"
-        />
-        <text
-          x="${textX}"
-          y="${textY}"
-          fill="white"
-          font-size="3"
-          text-anchor="middle"
-          dominant-baseline="middle"
-          transform="rotate(${textAngle - 90}, ${textX}, ${textY})"
-          style="text-transform: uppercase; font-weight: 700;"
-        >
-          ${prize.name.substring(0, 12)}${prize.name.length > 12 ? '...' : ''}
-        </text>
-      `
+      // GÜVENLİK: Prize name'i escape et
+      const displayName = prize.name.length > 12
+        ? escapeHtml(prize.name.substring(0, 12)) + '...'
+        : escapeHtml(prize.name)
+
+      return (
+        <g key={prize.id}>
+          <path
+            d={pathData}
+            fill={prize.color || '#ff0000'}
+            stroke="white"
+            strokeWidth="0.3"
+          />
+          <text
+            x={textX}
+            y={textY}
+            fill="white"
+            fontSize="3"
+            textAnchor="middle"
+            dominantBaseline="middle"
+            transform={`rotate(${textAngle - 90}, ${textX}, ${textY})`}
+            style={{ textTransform: 'uppercase', fontWeight: 700 }}
+          >
+            {displayName}
+          </text>
+        </g>
+      )
     })
 
-    return { svgContent: content, totalRotation: rotation }
+    return { wheelSegments: segments, totalRotation: rotation }
   }, [prizes, rotation])
 
   if (!prizes || prizes.length === 0) {
@@ -142,7 +154,9 @@ export function WheelPreview({
             <feDropShadow dx="0" dy="2" stdDeviation="2" floodOpacity="0.2" />
           </filter>
         </defs>
-        <g dangerouslySetInnerHTML={{ __html: svgContent }} />
+        <g filter="url(#wheel-shadow)">
+          {wheelSegments}
+        </g>
       </svg>
 
       {/* Center circle */}
