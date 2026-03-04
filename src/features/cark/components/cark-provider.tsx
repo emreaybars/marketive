@@ -525,7 +525,10 @@ export function CarkProvider({ children }: { children: ReactNode }) {
       const { data, error } = await supabase
         .rpc('get_user_wheel_spins', { p_customer_id: userId })
 
-      if (error) throw error
+      if (error) {
+        console.error('get_user_wheel_spins RPC error:', error.message, error)
+        throw error
+      }
 
       // Parse JSONB results and transform to match our interface
       const transformedData: WheelSpinResult[] = (data || []).map((item: any) => {
