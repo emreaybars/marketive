@@ -521,6 +521,8 @@ export function CarkProvider({ children }: { children: ReactNode }) {
         return
       }
 
+      console.log('Fetching wheel spins for userId:', userId)
+
       // Use RPC function to get user's wheel spins
       const { data, error } = await supabase
         .rpc('get_user_wheel_spins', { p_customer_id: userId })
