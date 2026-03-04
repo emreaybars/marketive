@@ -264,19 +264,11 @@
 
     log('Kaydediliyor:', prize.id, fullName, contact);
 
-    // Widget token'ı al
-    var widgetScript = document.getElementById('carkifelek-widget-script');
-    var shopToken = widgetScript ? widgetScript.getAttribute('data-shop-token') : null;
-
-    if (!shopToken) {
-      logError('Shop token bulunamadı');
-      return;
-    }
-
-    // Güvenli RPC fonksiyonu (token doğrulama + user_agent)
+    // Token kullanmadan doğrudan shop UUID ile
+    // Güvenlik: Supabase RLS politikaları shop_id kontrolü yapar
     supabaseClient
       .rpc('widget_log_spin_simple', {
-        p_token: shopToken,
+        p_shop_uuid: shopUuid,
         p_contact: contact,
         p_prize_id: prize.id,
         p_full_name: fullName,
