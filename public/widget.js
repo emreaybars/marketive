@@ -309,12 +309,23 @@
 
     setupEventListeners();
 
-    // Animation entry
+    // Animation entry ve otomatik modal açma
     setTimeout(function() {
-      var widget = document.getElementById('carkifelek-widget');
+      var widget = document.getElementById('carkifelek-widget-container');
       if (widget) {
         widget.style.opacity = '1';
         widget.style.transform = 'translateY(0)';
+      }
+
+      // Eğer showOnLoad aktifse modal'ı otomatik aç
+      if (widgetData && widgetData.widget && widgetData.widget.showOnLoad) {
+        var modal = document.getElementById('carkifelek-modal');
+        var toggleBtn = document.getElementById('carkifelek-toggle');
+        if (modal && toggleBtn) {
+          modal.style.display = 'flex';
+          toggleBtn.style.display = 'none';
+          log('Modal otomatik açıldı');
+        }
       }
     }, 100);
   }
