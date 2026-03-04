@@ -1,5 +1,5 @@
 -- ============================================
--- GET_USER_WHEEL_SPINS - wheel_wins olmadan
+-- GET_USER_WHEEL_SPINS - Ödül bilgileri ile
 -- ============================================
 
 DROP FUNCTION IF EXISTS get_user_wheel_spins(TEXT);
@@ -19,12 +19,13 @@ BEGIN
     'full_name', ws.full_name,
     'email', ws.email,
     'phone', ws.phone,
-    'prize_name', 'Ödül Kaydı Yok',  -- wheel_wins tablosu olmadan
+    'prize_name', COALESCE(p.name, 'Bilinmeyen Ödül'),
     'coupon_code', NULL::text,
     'won_at', ws.created_at
   )::json
   FROM wheel_spins ws
   JOIN shops s ON s.id = ws.shop_id
+  LEFT JOIN prizes p ON p.id::text = ws.result  -- result kolonu prize_id olarak kullanılıyor
   WHERE s.customer_id = p_customer_id
   ORDER BY ws.created_at DESC;
 END;
