@@ -285,7 +285,7 @@
       })
       .then(function(result) {
         if (result.error) {
-          logError('Spin kayıt hatası', result.error);
+          logError('Spin kayıt hatası:', result.error.message, result.error);
           return;
         }
         log('Kayıt başarılı - Spin ID:', result.data.spin_id, 'Coupon:', result.data.coupon_code);
