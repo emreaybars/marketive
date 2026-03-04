@@ -52,13 +52,14 @@ BEGIN
     RAISE EXCEPTION 'Bu iletişim bilgisi ile zaten çark çevirdiniz';
   END IF;
 
-  -- 5. SPIN KAYDI
-  INSERT INTO wheel_spins (shop_id, full_name, email, phone, created_at)
+  -- 5. SPIN KAYDI (result kolonu dahil)
+  INSERT INTO wheel_spins (shop_id, full_name, email, phone, result, created_at)
   VALUES (
     p_shop_uuid,
     p_full_name,
     CASE WHEN v_contact_type = 'email' THEN p_contact ELSE NULL END,
     CASE WHEN v_contact_type = 'phone' THEN p_contact ELSE NULL END,
+    'win',  -- result kolonu: win/lose/etc
     NOW()
   ) RETURNING id INTO v_spin_id;
 
