@@ -5,6 +5,10 @@
       "destination": "/api/widget"
     },
     {
+      "source": "/api/cark/:path*",
+      "destination": "/api/cark"
+    },
+    {
       "source": "/:path*",
       "destination": "/index.html"
     }
@@ -12,6 +16,9 @@
   "functions": {
     "api/widget.ts": {
       "maxDuration": 30
+    },
+    "api/cark.ts": {
+      "maxDuration": 60
     }
   }
 }
