@@ -1,0 +1,144 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Çarkıfelek Widget - Embed Örneği</title>
+  <style>
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+      margin: 0;
+      padding: 20px;
+      background: #f5f5f5;
+    }
+    .container {
+      max-width: 800px;
+      margin: 0 auto;
+      background: white;
+      padding: 30px;
+      border-radius: 12px;
+      box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+    }
+    h1 { color: #333; }
+    .code {
+      background: #f4f4f4;
+      padding: 15px;
+      border-radius: 6px;
+      overflow-x: auto;
+      margin: 15px 0;
+    }
+    .code pre {
+      margin: 0;
+      font-family: 'Monaco', 'Consolas', monospace;
+      font-size: 13px;
+      color: #333;
+    }
+    .note {
+      background: #fff3cd;
+      border-left: 4px solid #ffc107;
+      padding: 15px;
+      margin: 20px 0;
+      border-radius: 4px;
+    }
+    .note strong { color: #856404; }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <h1>Çarkıfelek Widget - Embed Örneği</h1>
+
+    <div class="note">
+      <strong>⚠️ Önemli:</strong> Widget'ı kullanmak için aşağıdaki değerleri kendi Supabase bilgilerinizle değiştirmeniz gerekiyor.
+    </div>
+
+    <h2>1. HTML Container (Zorunlu)</h2>
+    <p>Widget'ın görüntüleneceği container elementi:</p>
+    <div class="code">
+      <pre>&lt;!-- Widget Container --&gt;
+&lt;div id="carkifelek-widget"
+     data-supabase-url="YOUR_SUPABASE_URL"
+     data-supabase-key="YOUR_SUPABASE_ANON_KEY"
+     data-token="YOUR_SHOP_TOKEN"
+     data-shop-id="YOUR_SHOP_ID"&gt;
+&lt;/div&gt;</pre>
+    </div>
+
+    <h2>2. Widget Script</h2>
+    <p>Widget script'ini container'dan SONRA ekleyin:</p>
+    <div class="code">
+      <pre>&lt;script src="https://your-domain.com/widget.js"&gt;&lt;/script&gt;</pre>
+    </div>
+
+    <h2>3. Tam Örnek</h2>
+    <div class="code">
+      <pre>&lt;!DOCTYPE html&gt;
+&lt;html&gt;
+&lt;head&gt;
+  &lt;title&gt;Çarkıfelek Widget&lt;/title&gt;
+&lt;/head&gt;
+&lt;body&gt;
+
+  &lt;!-- Widget Container --&gt;
+  &lt;div id="carkifelek-widget"
+       data-supabase-url="https://xxx.supabase.co"
+       data-supabase-key="eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9..."
+       data-token="eyJzaWQiOiJzaG9wLTEiLCJ1aWQiOiJ1dWlkLTEyMyIsInRzIjoxNjM5...="
+       data-shop-id="shop-123"&gt;
+  &lt;/div&gt;
+
+  &lt;!-- Widget Script --&gt;
+  &lt;script src="https://your-domain.com/widget.js"&gt;&lt;/script&gt;
+
+&lt;/body&gt;
+&lt;/html&gt;</pre>
+    </div>
+
+    <h2>4. Parametre Açıklamaları</h2>
+    <table style="width: 100%; border-collapse: collapse;">
+      <tr style="background: #f4f4f4;">
+        <th style="padding: 10px; text-align: left; border: 1px solid #ddd;">Parametre</th>
+        <th style="padding: 10px; text-align: left; border: 1px solid #ddd;">Açıklama</th>
+      </tr>
+      <tr>
+        <td style="padding: 10px; border: 1px solid #ddd;"><code>id="carkifelek-widget"</code></td>
+        <td style="padding: 10px; border: 1px solid #ddd;">Widget container ID (zorunlu)</td>
+      </tr>
+      <tr>
+        <td style="padding: 10px; border: 1px solid #ddd;"><code>data-supabase-url</code></td>
+        <td style="padding: 10px; border: 1px solid #ddd;">Supabase proje URL</td>
+      </tr>
+      <tr>
+        <td style="padding: 10px; border: 1px solid #ddd;"><code>data-supabase-key</code></td>
+        <td style="padding: 10px; border: 1px solid #ddd;">Supabase anon/public key</td>
+      </tr>
+      <tr>
+        <td style="padding: 10px; border: 1px solid #ddd;"><code>data-token</code></td>
+        <td style="padding: 10px; border: 1px solid #ddd;">Shop token (backend'den alın)</td>
+      </tr>
+      <tr>
+        <td style="padding: 10px; border: 1px solid #ddd;"><code>data-shop-id</code></td>
+        <td style="padding: 10px; border: 1px solid #ddd;">Shop ID</td>
+      </tr>
+    </table>
+
+    <h2>5. Token Oluşturma</h2>
+    <p>Shop token oluşturmak için backend API'yi kullanın:</p>
+    <div class="code">
+      <pre>// Backend'de token oluşturma
+const { generateShopToken } = require('./server/widget-api.js');
+const token = generateShopToken('shop-123', 'uuid-here');
+
+// Embed kodu
+const embedCode = `
+&lt;div id="carkifelek-widget"
+     data-supabase-url="${process.env.SUPABASE_URL}"
+     data-supabase-key="${process.env.SUPABASE_ANON_KEY}"
+     data-token="${token}"
+     data-shop-id="shop-123"&gt;
+&lt;/div&gt;
+&lt;script src="/widget.js"&gt;&lt;/script&gt;
+`;</pre>
+    </div>
+  </div>
+</body>
+</html>

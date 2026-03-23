@@ -1,0 +1,17 @@
+{
+  "rewrites": [
+    {
+      "source": "/api/widget/:path*",
+      "destination": "/api/widget"
+    },
+    {
+      "source": "/:path*",
+      "destination": "/index.html"
+    }
+  ],
+  "functions": {
+    "api/widget.ts": {
+      "maxDuration": 30
+    }
+  }
+}
